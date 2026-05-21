@@ -46,6 +46,10 @@ const Equipo = sequelize.define('Equipo', {
     capacidadM3: {
         type: DataTypes.FLOAT,
         allowNull: true 
+    },
+    capacidad_tonelada: {
+        type: DataTypes.FLOAT,
+        allowNull: true
     }
 }, {
     tableName: 'equipos',

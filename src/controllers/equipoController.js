@@ -11,7 +11,7 @@ const equipoController = {
     },
     create: async (req, res) => {
         try {
-            const { nombre, proceso, codigo, marca, modelo, serie, anioFabricacion, fechaIngreso, capacidadYd3, capacidadM3 } = req.body;
+            const { nombre, proceso, codigo, marca, modelo, serie, anioFabricacion, fechaIngreso, capacidadYd3, capacidadM3, capacidad_tonelada } = req.body;
     
             // Crear el nuevo equipo
             const equipo = await Equipo.create({
@@ -24,7 +24,8 @@ const equipoController = {
                 anioFabricacion,
                 fechaIngreso,
                 capacidadYd3,
-                capacidadM3
+                capacidadM3,
+                capacidad_tonelada
             });
     
             res.status(201).json({
@@ -44,12 +45,12 @@ const equipoController = {
     update: async (req, res) => {
         try {
             const { id } = req.params;
-            const { nombre, proceso, codigo, marca, modelo, serie, anioFabricacion, fechaIngreso, capacidadYd3, capacidadM3 } = req.body;
+            const { nombre, proceso, codigo, marca, modelo, serie, anioFabricacion, fechaIngreso, capacidadYd3, capacidadM3, capacidad_tonelada } = req.body;
             const equipo = await Equipo.findByPk(id);
             if (!equipo) {
                 return res.status(404).json({ error: 'Equipo no encontrado' });
             }
-            await equipo.update({ nombre, proceso, codigo, marca, modelo, serie, anioFabricacion, fechaIngreso, capacidadYd3, capacidadM3 });
+            await equipo.update({ nombre, proceso, codigo, marca, modelo, serie, anioFabricacion, fechaIngreso, capacidadYd3, capacidadM3, capacidad_tonelada });
             res.json(equipo);
         } catch (error) {
             res.status(500).json({ error: 'Error al actualizar el equipo' });
