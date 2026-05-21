@@ -8,6 +8,7 @@ router.get('/horometros/ultimos', verificarToken, controller.obtenerUltimosHorom
 router.get('/:tipo/id/:id', verificarToken, controller.obtenerPorId);
 router.get('/:tipo/jefe', verificarToken, controller.obtenerPorJefe);
 router.post('/crear', controller.crear);
+router.put('/update-masivo',controller.actualizarMasivo);
 router.get('/:tipo', verificarToken, controller.obtener);
 router.get('/aprobacion/:tipo', verificarToken, controller.obtenerPorAprobacion);
 router.put('/update/:tipo/:id', controller.actualizar);

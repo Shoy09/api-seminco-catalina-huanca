@@ -11,25 +11,57 @@ module.exports = {
 
   // ✅ CREAR (uno o varios)
   async crear(req, res) {
+
     try {
+
       const { tipo, data } = req.body;
+
       const Modelo = obtenerModelo(tipo);
 
       let resultado;
 
+      // =====================================
+      // MÚLTIPLES REGISTROS
+      // =====================================
       if (Array.isArray(data)) {
-        // múltiples registros
-        resultado = await Modelo.bulkCreate(data);
+
+        const creados = await Modelo.bulkCreate(data);
+
+        resultado = creados.map((item, index) => ({
+          local_id: data[index].local_id ?? null,
+          server_id: item.id,
+          creado: true
+        }));
+
       } else {
-        // un solo registro
-        resultado = await Modelo.create(data);
+
+        // =====================================
+        // UN SOLO REGISTRO
+        // =====================================
+        const creado = await Modelo.create(data);
+
+        resultado = {
+          local_id: data.local_id ?? null,
+          server_id: creado.id,
+          creado: true
+        };
+
       }
 
-      res.json({ ok: true, data: resultado });
+      res.json({
+        ok: true,
+        data: resultado
+      });
 
     } catch (error) {
-      res.status(500).json({ ok: false, error: error.message });
+
+      res.status(500).json({
+        ok: false,
+        error: error.message
+      });
+
     }
+
   },
 
   // ✅ GET (con filtros)
@@ -319,6 +351,106 @@ async obtenerPorId(req, res) {
       error: error.message
     });
   }
+},
+
+  // =========================================
+  // ACTUALIZAR MASIVO
+  // =========================================
+async actualizarMasivo(req, res) {
+
+  try {
+
+    const { tipo, data } = req.body;
+
+    const Modelo = obtenerModelo(tipo);
+
+    if (!Array.isArray(data)) {
+
+      return res.status(400).json({
+        ok: false,
+        error: 'Data debe ser un array'
+      });
+
+    }
+
+    const resultados = [];
+
+    for (const item of data) {
+
+      try {
+
+        const id = item.idNube;
+
+        if (!id) {
+
+          resultados.push({
+            idNube: null,
+            actualizado: false,
+            error: 'idNube requerido'
+          });
+
+          continue;
+        }
+
+        // 🔥 quitar idNube antes de actualizar
+        const datosActualizar = { ...item };
+
+        delete datosActualizar.idNube;
+
+        // 🔥 verificar si existe
+        const existe = await Modelo.findByPk(id);
+
+        if (!existe) {
+
+          resultados.push({
+            idNube: id,
+            actualizado: false,
+            error: 'Registro no encontrado'
+          });
+
+          continue;
+
+        }
+
+        // 🔥 actualizar aunque no haya cambios
+        await Modelo.update(
+          datosActualizar,
+          {
+            where: { id }
+          }
+        );
+
+        resultados.push({
+          idNube: id,
+          actualizado: true
+        });
+
+      } catch (errorItem) {
+
+        resultados.push({
+          idNube: item.idNube ?? null,
+          actualizado: false,
+          error: errorItem.message
+        });
+
+      }
+
+    }
+
+    res.json({
+      ok: true,
+      data: resultados
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+
+  }
+
 }
 
 };
