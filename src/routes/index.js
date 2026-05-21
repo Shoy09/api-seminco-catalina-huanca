@@ -56,3 +56,4 @@ router.use('/guardias', guardiasRutes);
 router.use('/materiales', materialRoutes);
 
 module.exports = router;
+  
