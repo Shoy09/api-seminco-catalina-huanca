@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const materialController = require('../../controllers/materialcontroller.js');
+const materialController = require('../../controllers/material.controller');
 const verificarToken = require('../../middleware/auth');
 
 router.get('/', verificarToken, materialController.getAllMateriales);
