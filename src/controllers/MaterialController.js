@@ -20,7 +20,7 @@ exports.getMaterialById = async (req, res) => {
         res.status(500).json({ error: 'Error al obtener el material' });
     }
 };
-
+ 
 // Crear un material
 exports.createMaterial = async (req, res) => {
     try {
