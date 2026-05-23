@@ -50,6 +50,10 @@ const Equipo = sequelize.define('Equipo', {
     capacidad_tonelada: {
         type: DataTypes.FLOAT,
         allowNull: true
+    },
+    capacidad_tonelada_desmonte: {
+        type: DataTypes.FLOAT,
+        allowNull: true
     }
 }, {
     tableName: 'equipos',

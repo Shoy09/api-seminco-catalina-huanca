@@ -9,11 +9,24 @@ const equipoController = {
             res.status(500).json({ error: 'Error al obtener los equipos' });
         }
     },
+
     create: async (req, res) => {
         try {
-            const { nombre, proceso, codigo, marca, modelo, serie, anioFabricacion, fechaIngreso, capacidadYd3, capacidadM3, capacidad_tonelada } = req.body;
-    
-            // Crear el nuevo equipo
+            const {
+                nombre,
+                proceso,
+                codigo,
+                marca,
+                modelo,
+                serie,
+                anioFabricacion,
+                fechaIngreso,
+                capacidadYd3,
+                capacidadM3,
+                capacidad_tonelada,
+                capacidad_tonelada_desmonte
+            } = req.body;
+
             const equipo = await Equipo.create({
                 nombre,
                 proceso,
@@ -25,64 +38,119 @@ const equipoController = {
                 fechaIngreso,
                 capacidadYd3,
                 capacidadM3,
-                capacidad_tonelada
+                capacidad_tonelada,
+                capacidad_tonelada_desmonte
             });
-    
+
             res.status(201).json({
                 message: 'Equipo creado exitosamente',
                 equipo
             });
-    
+
         } catch (error) {
             console.error(error);
+
             res.status(500).json({
                 error: 'Error al crear el equipo',
                 details: error.message
             });
         }
     },
-    
+
     update: async (req, res) => {
         try {
             const { id } = req.params;
-            const { nombre, proceso, codigo, marca, modelo, serie, anioFabricacion, fechaIngreso, capacidadYd3, capacidadM3, capacidad_tonelada } = req.body;
+
+            const {
+                nombre,
+                proceso,
+                codigo,
+                marca,
+                modelo,
+                serie,
+                anioFabricacion,
+                fechaIngreso,
+                capacidadYd3,
+                capacidadM3,
+                capacidad_tonelada,
+                capacidad_tonelada_desmonte
+            } = req.body;
+
             const equipo = await Equipo.findByPk(id);
+
             if (!equipo) {
-                return res.status(404).json({ error: 'Equipo no encontrado' });
+                return res.status(404).json({
+                    error: 'Equipo no encontrado'
+                });
             }
-            await equipo.update({ nombre, proceso, codigo, marca, modelo, serie, anioFabricacion, fechaIngreso, capacidadYd3, capacidadM3, capacidad_tonelada });
+
+            await equipo.update({
+                nombre,
+                proceso,
+                codigo,
+                marca,
+                modelo,
+                serie,
+                anioFabricacion,
+                fechaIngreso,
+                capacidadYd3,
+                capacidadM3,
+                capacidad_tonelada,
+                capacidad_tonelada_desmonte
+            });
+
             res.json(equipo);
+
         } catch (error) {
-            res.status(500).json({ error: 'Error al actualizar el equipo' });
+            res.status(500).json({
+                error: 'Error al actualizar el equipo'
+            });
         }
     },
+
     delete: async (req, res) => {
         try {
             const { id } = req.params;
+
             const equipo = await Equipo.findByPk(id);
+
             if (!equipo) {
-                return res.status(404).json({ error: 'Equipo no encontrado' });
+                return res.status(404).json({
+                    error: 'Equipo no encontrado'
+                });
             }
+
             await equipo.destroy();
-            res.json({ message: 'Equipo eliminado correctamente' });
+
+            res.json({
+                message: 'Equipo eliminado correctamente'
+            });
+
         } catch (error) {
-            res.status(500).json({ error: 'Error al eliminar el equipo' });
+            res.status(500).json({
+                error: 'Error al eliminar el equipo'
+            });
         }
     },
+
     getByProceso: async (req, res) => {
-    try {
-        const { proceso } = req.params;
+        try {
+            const { proceso } = req.params;
 
-        const equipos = await Equipo.findAll({
-            where: { proceso }
-        });
+            const equipos = await Equipo.findAll({
+                where: { proceso }
+            });
 
-        res.json(equipos);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error al obtener equipos por proceso' });
+            res.json(equipos);
+
+        } catch (error) {
+            console.error(error);
+
+            res.status(500).json({
+                error: 'Error al obtener equipos por proceso'
+            });
+        }
     }
-}
 };
 
 module.exports = equipoController;
