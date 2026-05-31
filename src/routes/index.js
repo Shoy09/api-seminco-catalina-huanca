@@ -28,6 +28,9 @@ const mediHorizontal = require('../routes/api/medicionesHorizontalRoutes');
 const numeroRetardo = require('../routes/api/numero_retardosRoutes');
 const guardiasRutes = require('../routes/api/guardias');
 const materialRoutes = require('../routes/api/MaterialRoutes');
+const empresaRoutes = require('../routes/api/EmpresaRoutes');
+
+
 router.use('/usuarios', usuariosRoutes);  
 router.use('/auth', authRoutes);  
 router.use('/Equipo', equipoRoutes);  
@@ -54,6 +57,7 @@ router.use('/medicion-tal-horizontal', mediHorizontal);
 router.use('/n-retardos', numeroRetardo); 
 router.use('/guardias', guardiasRutes);
 router.use('/materiales', materialRoutes);
+router.use('/empresas', empresaRoutes);
 
 module.exports = router;
   
