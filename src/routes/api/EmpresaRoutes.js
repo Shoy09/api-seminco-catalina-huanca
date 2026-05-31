@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const empresaController = require('../../controllers/empresaController');
+const empresaController = require('../../controllers/EmpresaController');
 const verificarToken = require('../../middleware/auth');
 
 router.get('/', verificarToken, empresaController.getAll);
