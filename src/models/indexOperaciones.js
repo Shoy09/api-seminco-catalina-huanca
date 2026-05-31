@@ -7,6 +7,7 @@ const OperacionScissor = require('./OperacionScissor');
 const OperacionAnfochanger = require('./OperacionAnfochanger');
 const OperacionScalamin = require('./OperacionScalamin');
 const OperacionDumper = require('./OperacionDumper');
+const OperacionVolquetes = require('./OperacionVolquetes');
 
 const modelos = {
   tal_largo: OperacionTalLargo,
@@ -17,7 +18,8 @@ const modelos = {
   scissor: OperacionScissor,
   anfochanger: OperacionAnfochanger,
   scalamin: OperacionScalamin,
-  dumper: OperacionDumper
+  dumper: OperacionDumper,
+  volquetes:OperacionVolquetes
 };
 
 module.exports = modelos;
