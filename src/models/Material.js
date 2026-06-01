@@ -7,6 +7,10 @@ const Material = sequelize.define('Material', {
         primaryKey: true,
         autoIncrement: true
     },
+    proceso: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
     nombre: {
         type: DataTypes.STRING,
         allowNull: false
