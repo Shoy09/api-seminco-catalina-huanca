@@ -14,6 +14,10 @@ const OperacionVolquetes = sequelize.define('OperacionVolquetes', {
     horometros: DataTypes.TEXT,
     estado: { type: DataTypes.STRING, defaultValue: 'activo' },
     envio: { type: DataTypes.INTEGER, defaultValue: 0 },
+    Hora_envio: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
     revisado: { 
         type: DataTypes.INTEGER, 
         defaultValue: 0 
