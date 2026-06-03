@@ -56,3 +56,19 @@ exports.deleteMaterial = async (req, res) => {
         res.status(500).json({ error: 'Error al eliminar el material' });
     }
 };
+
+exports.getMaterialesByProceso = async (req, res) => {
+    try {
+        const { proceso } = req.params;
+
+        const materiales = await Material.findAll({
+            where: {
+                proceso
+            }
+        });
+
+        res.json(materiales);
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener materiales por proceso' });
+    }
+};
