@@ -29,7 +29,7 @@ const numeroRetardo = require('../routes/api/numero_retardosRoutes');
 const guardiasRutes = require('../routes/api/guardias');
 const materialRoutes = require('../routes/api/MaterialRoutes');
 const empresaRoutes = require('../routes/api/EmpresaRoutes');
-
+const toneladasScoopRoutes = require('../routes/api/ToneladasScoopsRoutes');
 
 router.use('/usuarios', usuariosRoutes);  
 router.use('/auth', authRoutes);  
@@ -58,6 +58,7 @@ router.use('/n-retardos', numeroRetardo);
 router.use('/guardias', guardiasRutes);
 router.use('/materiales', materialRoutes);
 router.use('/empresas', empresaRoutes);
+router.use('/toneladas-scoops', toneladasScoopRoutes);
 
 module.exports = router;
   
