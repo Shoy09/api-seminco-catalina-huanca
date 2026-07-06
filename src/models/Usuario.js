@@ -1,3 +1,4 @@
+// models/Usuario.js
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/sequelize");
 
@@ -9,7 +10,31 @@ const Usuario = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    codigo_dni: {
+
+    // ── Campos de identidad SSO (nuevos) ─────────────────────────────────
+    entra_oid: {
+      type: DataTypes.STRING(36),
+      allowNull: true,
+      unique: true,
+      comment: "Object ID inmutable de Microsoft Entra ID",
+    },
+    activo: {
+      type: DataTypes.TINYINT,
+      allowNull: false,
+      defaultValue: 1,
+      comment: "0 = desactivado por SCIM desde Azure",
+    },
+
+    // ── Campos que SCIM puede poblar ─────────────────────────────────────
+    correo: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+      validate: {
+        isEmail: { msg: "Debe ingresar un correo electrónico válido." },
+      },
+    },
+    nombres: {
       type: DataTypes.STRING,
       allowNull: false,
     },
@@ -17,66 +42,55 @@ const Usuario = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    nombres: {
+
+    // ── Campos del negocio (se completan manualmente en tu app) ───────────
+    codigo_dni: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,   // ← cambiado a true: SCIM no lo conoce
     },
     cargo: {
       type: DataTypes.STRING,
-      allowNull: true, // Ahora puede ser NULL
+      allowNull: true,
     },
     rol: {
       type: DataTypes.STRING,
-      allowNull: true, // o false si quieres que sea obligatorio
+      allowNull: true,
     },
     empresa: {
       type: DataTypes.STRING,
-      allowNull: true, // Ahora puede ser NULL
+      allowNull: true,
     },
     guardia: {
       type: DataTypes.STRING,
-      allowNull: true, // Ahora puede ser NULL
+      allowNull: true,
     },
     autorizado_equipo: {
       type: DataTypes.STRING,
-      allowNull: true, // Ahora puede ser NULL
+      allowNull: true,
     },
     area: {
       type: DataTypes.STRING,
-      allowNull: true, // Ahora puede ser NULL
+      allowNull: true,
     },
     clasificacion: {
       type: DataTypes.STRING,
-      allowNull: true, // Ahora puede ser NULL
-    },
-    correo: {
-      type: DataTypes.STRING,
-      allowNull: true, // Puede ser NULL si se crea desde el Excel sin correo
-      unique: true,
-      validate: {
-        isEmail: {
-          msg: "Debe ingresar un correo electrónico válido.",
-        },
-      },
-    },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        is: {
-          args: /^(?=.*[a-zA-Z0-9@#$%^&+=]).{6,}$/,
-          msg: "La contraseña debe tener al menos 6 caracteres, incluyendo letras, números y símbolos.",
-        },
-      },
+      allowNull: true,
     },
     firma: {
       type: DataTypes.STRING,
-      allowNull: true, // Puede ser NULL si el usuario no tiene una imagen de firma
+      allowNull: true,
     },
     operaciones_autorizadas: {
       type: DataTypes.JSON,
       allowNull: true,
-      defaultValue: {}, // Ninguna operación autorizada por defecto
+      defaultValue: {},
+    },
+
+    // ── Password: se mantiene pero ya no se usa para login ───────────────
+    // Cuando SSO esté estable en prod, hacer allowNull: true
+    password: {
+      type: DataTypes.STRING,
+      allowNull: true,  // ← cambiado a true porque SCIM no envía passwords
     },
   },
   {

@@ -88,8 +88,11 @@ exports.crearUsuario = [
                 if (existingEmail.length > 0) return res.status(400).json({ error: 'El correo ya está en uso' });
             }
 
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(password, salt);
+            let hashedPassword = null;
+if (password) {
+  const salt = await bcrypt.genSalt(10);
+  hashedPassword = await bcrypt.hash(password, salt);
+}
 
             // Aseguramos que se convierte en string solo si no lo es ya
             let operacionesStr;

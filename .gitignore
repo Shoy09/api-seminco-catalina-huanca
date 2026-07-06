@@ -22,3 +22,8 @@ package-lock.json
 yarn.lock
 
 test-data/
+
+
+.env
+.env.*
+!.env.example
