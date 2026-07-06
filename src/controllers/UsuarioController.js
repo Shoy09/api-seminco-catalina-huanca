@@ -87,7 +87,7 @@ exports.crearUsuario = [
                 const [existingEmail] = await db.query('SELECT * FROM usuarios WHERE correo = ?', [correo]);
                 if (existingEmail.length > 0) return res.status(400).json({ error: 'El correo ya está en uso' });
             }
-
+ 
             let hashedPassword = null;
 if (password) {
   const salt = await bcrypt.genSalt(10);
