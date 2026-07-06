@@ -45,7 +45,7 @@ function iniciarProgramacion() {
 
     cron.schedule(expresion, tareaDiaria, {
 
-        timezone: process.env.TZ || 'America/Lima',
+        timezone: process.env.TIMEZONE || 'America/Lima',
 
     });
 
