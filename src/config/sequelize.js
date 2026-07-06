@@ -11,7 +11,7 @@ requiredEnv.forEach((env) => {
 });
 
 // 🔥 Parseo seguro del puerto
-const DB_PORT = Number(process.env.DB_PORT) || 3306;
+const DB_PORT = Number(process.env.DB_PORT) || 20345;
 
 // 🔥 Debug (solo útil en desarrollo)
 console.log('🔍 DB CONFIG:');
