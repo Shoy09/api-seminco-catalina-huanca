@@ -33,7 +33,7 @@ const toneladasScoopRoutes = require('../routes/api/ToneladasScoopsRoutes');
 const scimRoutes  = require('../routes/api/scimRoutes');
 const testEmail = require('../services/testEmail');
 router.use('/usuarios', usuariosRoutes);  
-//router.use('/auth', authRoutes);  
+router.use('/auth', authRoutes);  
 
 router.use('/Equipo', equipoRoutes);  
 router.use('/estado', estadoRoutes);  
