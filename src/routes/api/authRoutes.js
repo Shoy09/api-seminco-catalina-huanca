@@ -16,8 +16,8 @@ router.get('/oidc/login',
 // 2. Callback: EntraID redirige aquí con el código de autorización
 router.get('/oidc/callback',
   (req, res, next) => {
-    console.log('========== CALLBACK OIDC ENTRÓ ==========');
-    console.log(req.query);
+    console.log('========== CALLBACK RECIBIDO ==========');
+    console.log('Query:', req.query);
     next();
   },
 
@@ -26,7 +26,7 @@ router.get('/oidc/callback',
   }),
 
   (req, res, next) => {
-    console.log('========== PASSPORT VALIDÓ ==========');
+    console.log('========== PASSPORT OK ==========');
     console.log(req.user);
     next();
   },
