@@ -20,11 +20,13 @@ const oidcStrategy = new OIDCStrategy(
     // ── FIX para Vercel serverless: reemplaza express-session con cookies ──
     useCookieInsteadOfSession: true,
     cookieEncryptionKeys: [
-  {
-    key: process.env.COOKIE_KEY,
-    iv: process.env.COOKIE_IV,
-  },
-],
+      {
+        key: (process.env.JWT_SECRET || 'defaultkey00000000000000000000000')
+              .substring(0, 32)
+              .padEnd(32, '0'),
+        iv: 12,
+      },
+    ],
   },
   (iss, sub, profile, accessToken, refreshToken, done) => {
     if (!profile.oid) {
