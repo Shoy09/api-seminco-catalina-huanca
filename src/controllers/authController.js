@@ -94,13 +94,13 @@ exports.iniciarLoginOIDC = (req, res, next) => next();
 
 // GET /auth/oidc/callback
 // EntraID vuelve aquí — passport ya validó el token
+// controllers/authController.js — solo este método cambia
 exports.callbackOIDC = async (req, res) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Autenticación OIDC fallida' });
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
     }
 
-    // req.user viene de passport-azure-ad OIDCStrategy
     const perfilEntra = {
       oid:       req.user.oid,
       email:     req.user._json?.email     || req.user.upn || '',
@@ -111,18 +111,16 @@ exports.callbackOIDC = async (req, res) => {
     const usuario = await buscarOCrearUsuario(perfilEntra);
     const token   = generarToken(usuario);
 
-    // Opción A: API — devolver el JWT directo (para SPAs / mobile)
-    res.status(200).json({ token });
-
-    // Opción B: si usas redirect al frontend, descomentar esto:
-    // res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    // ← Redirigir al frontend con el token en la URL
+    // El LoginComponent lo leerá en ngOnInit() con procesarTokenDeUrl()
+    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
 
   } catch (error) {
     if (error.message === 'USUARIO_INACTIVO') {
-      return res.status(403).json({ error: 'Usuario desactivado. Contacte al administrador de TI.' });
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=usuario_inactivo`);
     }
     console.error('Error en callback OIDC:', error.message);
-    res.status(500).json({ error: 'Error procesando autenticación OIDC' });
+    res.redirect(`${process.env.FRONTEND_URL}/login?error=server_error`);
   }
 };
 
