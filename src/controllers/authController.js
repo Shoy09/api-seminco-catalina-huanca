@@ -96,6 +96,8 @@ exports.iniciarLoginOIDC = (req, res, next) => next();
 // EntraID vuelve aquí — passport ya validó el token
 // controllers/authController.js — solo este método cambia
 exports.callbackOIDC = async (req, res) => {
+  console.log('>>>> Entró a callbackOIDC <<<<');
+  console.log(req.user);
   try {
     if (!req.user) {
       return res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);

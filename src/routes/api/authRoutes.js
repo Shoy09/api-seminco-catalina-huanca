@@ -15,7 +15,7 @@ router.get('/oidc/login',
  
 // 2. Callback: EntraID redirige aquí con el código de autorización
 router.get('/oidc/callback',
-  passport.authenticate('oidc', { session: false, failureRedirect: '/auth/error' }),
+  passport.authenticate('oidc', { session: false, failureRedirect: '/api/auth/error' }),
   authCtrl.callbackOIDC
 );
  
