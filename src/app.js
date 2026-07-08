@@ -7,7 +7,7 @@ const swaggerUI  = require('swagger-ui-express');
 const swaggerDoc = require('../swagger.json');
 
 // ── SSO: importar passport configurado ───────────────────────────────────────
-const { passport, samlStrategy } = require('./config/passport');
+const { passport, samlStrategy } = require('./config/Enter_ID/passport');
 
 // Servicios
 const { iniciarProgramacion } = require('./services/scheduler');
