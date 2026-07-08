@@ -16,15 +16,13 @@ const oidcStrategy = new OIDCStrategy(
     scope:            config.oidc.scope,
     passReqToCallback: false,
     loggingLevel:     process.env.NODE_ENV === 'production' ? 'error' : 'warn',
-
-    // ── FIX para Vercel serverless: reemplaza express-session con cookies ──
     useCookieInsteadOfSession: true,
     cookieEncryptionKeys: [
       {
         key: (process.env.JWT_SECRET || 'defaultkey00000000000000000000000')
               .substring(0, 32)
               .padEnd(32, '0'),
-        iv: 12,
+        iv: Buffer.alloc(12),    // ← único cambio
       },
     ],
   },
