@@ -109,11 +109,17 @@ exports.callbackOIDC = async (req, res) => {
     };
 
     const usuario = await buscarOCrearUsuario(perfilEntra);
-    const token   = generarToken(usuario);
+const token   = generarToken(usuario);
 
-    // ← Redirigir al frontend con el token en la URL
-    // El LoginComponent lo leerá en ngOnInit() con procesarTokenDeUrl()
-    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
+console.log('====================================');
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+
+const destino = `${process.env.FRONTEND_URL}/login?token=${token}`;
+
+console.log('Destino:', destino);
+console.log('====================================');
+
+return res.redirect(destino);
 
   } catch (error) {
     if (error.message === 'USUARIO_INACTIVO') {
