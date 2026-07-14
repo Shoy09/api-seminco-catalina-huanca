@@ -31,7 +31,9 @@ const materialRoutes = require('../routes/api/MaterialRoutes');
 const empresaRoutes = require('../routes/api/EmpresaRoutes');
 const toneladasScoopRoutes = require('../routes/api/ToneladasScoopsRoutes');
 const scimRoutes  = require('../routes/api/scimRoutes');
-const testEmail = require('../services/testEmail');
+// const notificacionesRoutes = require('../routes/api/notificacionesRoutes');
+
+
 router.use('/usuarios', usuariosRoutes);  
 router.use('/auth', authRoutes);  
 
@@ -62,12 +64,12 @@ router.use('/materiales', materialRoutes);
 router.use('/empresas', empresaRoutes);
 router.use('/toneladas-scoops', toneladasScoopRoutes);
 
-router.use('/test', testEmail);
 
  
 // ── SCIM: EntraID llama a estos endpoints para crear/actualizar/desactivar usuarios
 // URL base a configurar en Azure: https://tuapp.com/api/scim/v2
 router.use('/scim/v2', scimRoutes);
+// router.use('/notificaciones', notificacionesRoutes);
 
 module.exports = router;
     

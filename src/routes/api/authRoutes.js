@@ -5,6 +5,9 @@ const express  = require('express');
 const router   = express.Router();
 const { passport } = require('../../config/Enter_ID/passport');
 const authCtrl     = require('../../controllers/authController');
+
+//Login - inicial app
+router.post('/login', authCtrl.autenticarUsuario);
  
 // ── OIDC (OpenID Connect con EntraID) ────────────────────────────────────
  
