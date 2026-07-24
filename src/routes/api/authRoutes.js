@@ -46,4 +46,4 @@ router.get('/error', (req, res) => {
   res.status(401).json({ error: 'Error de autenticación SSO. Verifique sus credenciales.' });
 });
  
-module.exports = router;   
+module.exports = router;      
