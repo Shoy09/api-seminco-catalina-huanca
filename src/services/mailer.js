@@ -32,5 +32,3 @@ module.exports = {
   sendMail,
   verifyConnection,
 };
-
-module.exports = { sendMail };

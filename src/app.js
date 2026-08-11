@@ -12,7 +12,7 @@ const { passport, samlStrategy } = require('./config/Enter_ID/passport');
 
 // Servicios
 const { iniciarProgramacion } = require('./services/scheduler');
-// const { verifyConnection } = require('./services/mailer');
+const { verifyConnection } = require('./services/mailer');
 
 const app = express();
 
@@ -53,7 +53,7 @@ const port = process.env.PORT || 3000;
 
 async function iniciarServidor() {
   try {
-    // await verifyConnection();
+    await verifyConnection();
 
     if (process.env.ENABLE_SCHEDULER === 'true') {
       iniciarProgramacion();

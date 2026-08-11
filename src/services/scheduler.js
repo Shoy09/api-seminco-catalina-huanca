@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 
-const { enviarCorreo } = require('./mailer');
+const { sendMail } = require('./mailer');
 
 const destinatarios = require('./recipients.json');
 
@@ -10,7 +10,7 @@ async function tareaDiaria() {
 
     try {
 
-        await enviarCorreo({
+        await sendMail({
 
             to: destinatarios,
 
