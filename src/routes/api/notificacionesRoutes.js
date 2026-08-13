@@ -1,8 +1,12 @@
 const express = require('express');
 const multer = require('multer');
 const { sendMail } = require('../../services/mailer');
+const verificarToken = require('../../middleware/auth');
 
 const router = express.Router();
+
+// Todas las rutas de notificaciones requieren JWT
+router.use(verificarToken);
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
