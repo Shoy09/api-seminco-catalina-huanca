@@ -8,13 +8,14 @@ const transporter = nodemailer.createTransport({
   auth: config.auth,
 });
 
-async function sendMail({ to, subject, text, html }) {
+async function sendMail({ to, subject, text, html, attachments }) {
   return transporter.sendMail({
     from: config.from,
     to,
     subject,
     text,
     html,
+    attachments, // array de adjuntos de nodemailer (opcional)
   });
 }
 

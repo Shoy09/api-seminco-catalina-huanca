@@ -72,7 +72,7 @@ exports.serviceProviderConfig = (req, res) => {
     }],
     meta: {
       resourceType: 'ServiceProviderConfig',
-      location:     `${process.env.APP_URL || ''}/api/scim/v2/ServiceProviderConfig`,
+      location:     `${req.protocol}://${req.get('host')}/api/scim/v2/ServiceProviderConfig`,
     },
   });
 };
@@ -89,8 +89,10 @@ exports.listarUsuarios = async (req, res) => {
     let where = {};
     const matchUser     = filter.match(/userName eq "([^"]+)"/i);
     const matchExternal = filter.match(/externalId eq "([^"]+)"/i);
+    const matchActive   = filter.match(/active eq (true|false)/i);
     if (matchUser)     where.correo    = matchUser[1];
     if (matchExternal) where.entra_oid = matchExternal[1];
+    if (matchActive)   where.activo    = matchActive[1].toLowerCase() === 'true' ? 1 : 0;
 
     const { count: total, rows } = await Usuario.findAndCountAll({
       where,
@@ -283,6 +285,16 @@ exports.actualizarUsuario = async (req, res) => {
       // EntraID también puede usar 'add' para activar usuarios
       if (tipo === 'add' && path === 'active') {
         cambios.activo = value ? 1 : 0;
+      }
+
+      // Operación remove — limpiar campos SCIM (nunca campos de negocio)
+      if (tipo === 'remove') {
+        if (path === 'active')                               cambios.activo    = 0;
+        if (path === 'userName')                             cambios.correo    = null;
+        if (path === 'name.givenName')                       cambios.nombres   = 'Sin nombre';
+        if (path === 'name.familyName')                      cambios.apellidos = 'Sin apellido';
+        if (path === 'emails' || path === 'emails[type eq "work"].value') cambios.correo = null;
+        if (path === 'externalId')                           cambios.entra_oid = null;
       }
     }
 

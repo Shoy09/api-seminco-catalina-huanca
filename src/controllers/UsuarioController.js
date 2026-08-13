@@ -5,6 +5,7 @@ const path = require('path');
 const db = require('../config/db');
 const verificarToken = require('../middleware/auth');
 const upload = require('../config/upload');
+const cloudinary = require('../config/cloudinary');
 const Usuario = require("../models/Usuario");
 const { Op } = require('sequelize');
 

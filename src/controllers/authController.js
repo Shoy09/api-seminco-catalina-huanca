@@ -16,47 +16,25 @@ const db = require('../config/db');
 async function buscarOCrearUsuario(perfilEntra) {
   const { oid, email, nombres, apellidos } = perfilEntra;
 
-  // 1. Buscar por OID de EntraID (identificador inmutable)
-  let usuario = await Usuario.findOne({ where: { entra_oid: oid } });
+  // Buscar por OID de EntraID (identificador inmutable)
+  const usuario = await Usuario.findOne({ where: { entra_oid: oid } });
 
-  if (usuario) {
-    // Verificar que no esté desactivado por SCIM
-    if (!usuario.activo) {
-      throw new Error('USUARIO_INACTIVO');
-    }
-
-    // Actualizar solo los campos que vienen de EntraID
-    // NO tocamos: cargo, rol, area, firma, codigo_dni, operaciones_autorizadas
-    await usuario.update({
-      nombres,
-      apellidos,
-      correo: email,    // tu columna se llama 'correo', no 'email'
-    });
-
-    return usuario;
+  // Si no existe, SCIM debió haberlo creado antes del primer login
+  if (!usuario) {
+    throw new Error('USUARIO_NO_APROVISIONADO');
   }
 
-  // 2. No existe: crear con datos básicos que SCIM enviaría
-  //    SCIM debería haber creado el usuario antes del primer login,
-  //    pero esto actúa como fallback seguro.
-  usuario = await Usuario.create({
-    entra_oid: oid,
-    correo:    email,
+  // Verificar que no esté desactivado por SCIM
+  if (!usuario.activo) {
+    throw new Error('USUARIO_INACTIVO');
+  }
+
+  // Actualizar solo los campos que vienen de EntraID
+  // NO tocamos: cargo, rol, area, firma, codigo_dni, operaciones_autorizadas
+  await usuario.update({
     nombres,
     apellidos,
-    activo:    1,
-    password:  null,   // sin password — autenticación es 100% SSO
-    // Campos de negocio: quedan null hasta que un admin los complete
-    codigo_dni:             null,
-    cargo:                  null,
-    rol:                    null,
-    area:                   null,
-    clasificacion:          null,
-    empresa:                null,
-    guardia:                null,
-    autorizado_equipo:      null,
-    firma:                  null,
-    operaciones_autorizadas: {},
+    correo: email,
   });
 
   return usuario;
@@ -129,6 +107,9 @@ return res.redirect(destino);
     if (error.message === 'USUARIO_INACTIVO') {
       return res.redirect(`${process.env.FRONTEND_URL}/login?error=usuario_inactivo`);
     }
+    if (error.message === 'USUARIO_NO_APROVISIONADO') {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=usuario_no_aprovisionado`);
+    }
     console.error('Error en callback OIDC:', error.message);
     res.redirect(`${process.env.FRONTEND_URL}/login?error=server_error`);
   }
@@ -171,6 +152,9 @@ exports.callbackSAML = async (req, res) => {
   } catch (error) {
     if (error.message === 'USUARIO_INACTIVO') {
       return res.status(403).json({ error: 'Usuario desactivado. Contacte al administrador de TI.' });
+    }
+    if (error.message === 'USUARIO_NO_APROVISIONADO') {
+      return res.status(403).json({ error: 'Usuario no aprovisionado. Contacte al administrador de TI.' });
     }
     console.error('Error en callback SAML:', error.message);
     res.status(500).json({ error: 'Error procesando autenticación SAML' });
@@ -221,6 +205,11 @@ exports.autenticarUsuario = async (req, res) => {
         }
 
         const usuario = rows[0];
+
+        // Verificar que el usuario no esté desactivado por SCIM
+        if (usuario.activo === 0) {
+            return res.status(403).json({ error: 'Usuario desactivado. Contacte al administrador.' });
+        }
 
         
         const esValida = await bcrypt.compare(password, usuario.password);
