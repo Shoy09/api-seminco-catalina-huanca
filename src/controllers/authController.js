@@ -14,7 +14,7 @@ const db = require('../config/db');
 // ════════════════════════════════════════════════════════════════════════════
 
 async function buscarOCrearUsuario(perfilEntra) {
-  const { oid, email, nombres, apellidos } = perfilEntra;
+  const { oid } = perfilEntra;
 
   // Buscar por OID de EntraID (identificador inmutable)
   const usuario = await Usuario.findOne({ where: { entra_oid: oid } });
@@ -25,17 +25,10 @@ async function buscarOCrearUsuario(perfilEntra) {
   }
 
   // Verificar que no esté desactivado por SCIM
+  // La identidad (nombres, correo, etc.) es responsabilidad de SCIM, no del login
   if (!usuario.activo) {
     throw new Error('USUARIO_INACTIVO');
   }
-
-  // Actualizar solo los campos que vienen de EntraID
-  // NO tocamos: cargo, rol, area, firma, codigo_dni, operaciones_autorizadas
-  await usuario.update({
-    nombres,
-    apellidos,
-    correo: email,
-  });
 
   return usuario;
 }
@@ -84,10 +77,7 @@ exports.callbackOIDC = async (req, res) => {
     }
 
     const perfilEntra = {
-      oid:       req.user.oid,
-      email:     req.user._json?.email     || req.user.upn || '',
-      nombres:   req.user.name?.givenName  || req.user._json?.given_name  || '',
-      apellidos: req.user.name?.familyName || req.user._json?.family_name || '',
+      oid: req.user.oid,
     };
 
     const usuario = await buscarOCrearUsuario(perfilEntra);
@@ -134,10 +124,7 @@ exports.callbackSAML = async (req, res) => {
     const attrs   = req.user;  // passport-saml pone los atributos aquí
 
     const perfilEntra = {
-      oid:       attrs[attrMap.id],
-      email:     attrs[attrMap.email]    || '',
-      nombres:   attrs[attrMap.nombres]  || '',
-      apellidos: attrs[attrMap.apellidos]|| '',
+      oid: attrs[attrMap.id],
     };
 
     if (!perfilEntra.oid) {
