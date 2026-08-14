@@ -56,6 +56,7 @@ function fromScim(body) {
 // ── GET /scim/v2/ServiceProviderConfig ────────────────────────────────────────
 // EntraID llama esto primero en el Test Connection
 exports.serviceProviderConfig = (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
   res.status(200).json({
     schemas:        ['urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig'],
     patch:          { supported: true },
@@ -70,9 +71,28 @@ exports.serviceProviderConfig = (req, res) => {
       description: 'Bearer token requerido para todas las operaciones SCIM',
       primary:     true,
     }],
+    // Tipos de recursos soportados — Entra ID usa esto para saber qué sincronizar
+    resourceTypes: [
+      {
+        schemas:   ['urn:ietf:params:scim:schemas:core:2.0:ResourceType'],
+        id:        'User',
+        name:      'User',
+        endpoint:  '/Users',
+        schema:    'urn:ietf:params:scim:schemas:core:2.0:User',
+        meta: { resourceType: 'ResourceType', location: `${baseUrl}/api/scim/v2/ResourceTypes/User` },
+      },
+      {
+        schemas:   ['urn:ietf:params:scim:schemas:core:2.0:ResourceType'],
+        id:        'Group',
+        name:      'Group',
+        endpoint:  '/Groups',
+        schema:    'urn:ietf:params:scim:schemas:core:2.0:Group',
+        meta: { resourceType: 'ResourceType', location: `${baseUrl}/api/scim/v2/ResourceTypes/Group` },
+      },
+    ],
     meta: {
       resourceType: 'ServiceProviderConfig',
-      location:     `${req.protocol}://${req.get('host')}/api/scim/v2/ServiceProviderConfig`,
+      location:     `${baseUrl}/api/scim/v2/ServiceProviderConfig`,
     },
   });
 };

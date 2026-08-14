@@ -99,4 +99,15 @@ const Usuario = sequelize.define(
   }
 );
 
+// ── Asociaciones N:M con grupos SCIM ─────────────────────────────────────────
+Usuario.associate = (models) => {
+  Usuario.belongsToMany(models.ScimGroup, {
+    through: 'scim_group_members',
+    foreignKey: 'user_id',
+    otherKey: 'group_id',
+    as: 'scimGroups',
+    timestamps: true,
+  });
+};
+
 module.exports = Usuario;
