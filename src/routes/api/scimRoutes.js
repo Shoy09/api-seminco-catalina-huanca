@@ -5,9 +5,16 @@ const express         = require('express');
 const router          = express.Router();
 const scimCtrl        = require('../../controllers/scimController');
 const scimGroupCtrl   = require('../../controllers/scimGroupController');
+const scimLogger      = require('../../middleware/scimLogger');
 
 // Todas las rutas SCIM requieren el Bearer Token configurado en EntraID
 router.use(scimCtrl.verificarScimToken);
+
+// Registrar todas las peticiones SCIM en la BD para auditoría
+router.use(scimLogger);
+
+// Panel de logs — GET /api/scim/logs?limit=50&offset=0&errors=true
+router.get('/logs', scimCtrl.consultarLogs);
 
 // Configuración del proveedor (EntraID lo consulta primero)
 router.get('/ServiceProviderConfig', scimCtrl.serviceProviderConfig);

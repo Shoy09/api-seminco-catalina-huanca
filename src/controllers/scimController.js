@@ -1,8 +1,9 @@
 // controllers/scimController.js
 require('dotenv').config();
-const Usuario = require('../models/Usuario');
-const { Op }  = require('sequelize');
-const config  = require('../config/Enter_ID/entraId'); // ← mismo path que authController
+const Usuario  = require('../models/Usuario');
+const ScimLog  = require('../models/ScimLog');
+const { Op }   = require('sequelize');
+const config   = require('../config/Enter_ID/entraId'); // ← mismo path que authController
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
 exports.verificarScimToken = (req, res, next) => {
@@ -356,5 +357,44 @@ exports.eliminarUsuario = async (req, res) => {
       status:  '500',
       detail:  err.message,
     });
+  }
+};
+
+// ── GET /scim/logs ────────────────────────────────────────────────────────────
+// Panel de consulta de logs — protegido con el mismo Bearer token SCIM
+exports.consultarLogs = async (req, res) => {
+  try {
+    const limit      = Math.min(parseInt(req.query.limit,  10) || 50, 200);
+    const offset     = parseInt(req.query.offset, 10) || 0;
+    const soloErrores = req.query.errors === 'true';
+
+    const where = soloErrores ? { status_code: { [Op.gte]: 400 } } : {};
+
+    const { count, rows } = await ScimLog.findAndCountAll({
+      where,
+      order:  [['createdAt', 'DESC']],
+      limit,
+      offset,
+    });
+
+    res.status(200).json({
+      total:  count,
+      limit,
+      offset,
+      logs:   rows.map(l => ({
+        id:           l.id,
+        fecha:        l.createdAt,
+        method:       l.method,
+        endpoint:     l.endpoint,
+        status:       l.status_code,
+        ip:           l.ip,
+        error:        l.error || null,
+        request_body: l.request_body  ? JSON.parse(l.request_body)  : null,
+        response:     l.response_body ? JSON.parse(l.response_body) : null,
+      })),
+    });
+  } catch (err) {
+    console.error('SCIM consultarLogs:', err.message);
+    res.status(500).json({ error: err.message });
   }
 };
