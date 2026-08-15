@@ -10,11 +10,11 @@ const scimLogger      = require('../../middleware/scimLogger');
 // Todas las rutas SCIM requieren el Bearer Token configurado en EntraID
 router.use(scimCtrl.verificarScimToken);
 
-// Registrar todas las peticiones SCIM en la BD para auditoría
-router.use(scimLogger);
-
-// Panel de logs — GET /api/scim/logs?limit=50&offset=0&errors=true
+// Panel de logs — sin logger para no registrarse a sí mismo
 router.get('/logs', scimCtrl.consultarLogs);
+
+// A partir de aquí todas las peticiones quedan registradas en scim_logs
+router.use(scimLogger);
 
 // Configuración del proveedor (EntraID lo consulta primero)
 router.get('/ServiceProviderConfig', scimCtrl.serviceProviderConfig);
