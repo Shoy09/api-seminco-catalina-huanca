@@ -28,22 +28,11 @@ app.use(cors({
 // ── Body parsers ──────────────────────────────────────────────────────────────
 // Azure Entra ID envía Content-Type: application/scim+json
 // express.json() por defecto solo acepta application/json → body queda vacío
-// La opción `type` acepta un array de content-types o una función
 app.use(express.json({
   limit: '10mb',
   type: ['application/json', 'application/scim+json'],
 }));
 app.use(express.urlencoded({ extended: true }));
-
-// LOG TEMPORAL — diagnosticar body en Vercel
-app.use((req, res, next) => {
-  if (req.method === 'PATCH' || req.method === 'POST') {
-    console.log('[RAW] method:', req.method, 'url:', req.url);
-    console.log('[RAW] content-type:', req.headers['content-type']);
-    console.log('[RAW] req.body:', JSON.stringify(req.body));
-  }
-  next();
-});
 
 // ── Cookie Parser (OBLIGATORIO para OIDC con useCookieInsteadOfSession) ───────
 app.use(cookieParser());
