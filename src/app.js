@@ -29,6 +29,17 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// LOG TEMPORAL — diagnosticar body en Vercel
+app.use((req, res, next) => {
+  if (req.method === 'PATCH') {
+    console.log('[RAW] method:', req.method, 'url:', req.url);
+    console.log('[RAW] content-type:', req.headers['content-type']);
+    console.log('[RAW] req.body:', JSON.stringify(req.body));
+    console.log('[RAW] readable:', req.readable);
+  }
+  next();
+});
+
 // ── Cookie Parser (OBLIGATORIO para OIDC con useCookieInsteadOfSession) ───────
 app.use(cookieParser());
 
