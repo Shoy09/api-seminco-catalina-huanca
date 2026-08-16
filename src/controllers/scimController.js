@@ -167,6 +167,11 @@ exports.obtenerUsuario = async (req, res) => {
 exports.crearUsuario = async (req, res) => {
   try {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+    // LOG TEMPORAL — diagnóstico body POST
+    console.log('[SCIM POST] content-type:', req.headers['content-type']);
+    console.log('[SCIM POST] body recibido:', JSON.stringify(req.body, null, 2));
+
     const datos   = fromScim(req.body);
 
     if (!datos.correo) return res.status(400).json({
@@ -275,8 +280,11 @@ exports.actualizarUsuario = async (req, res) => {
     const operations = req.body.Operations || [];
     const cambios    = {};
 
-    // LOG TEMPORAL — ver exactamente qué envía EntraID en el PATCH
+    // LOG TEMPORAL — diagnóstico completo del request
+    console.log('[SCIM PATCH] content-type:', req.headers['content-type']);
     console.log('[SCIM PATCH] body recibido:', JSON.stringify(req.body, null, 2));
+    console.log('[SCIM PATCH] raw body keys:', Object.keys(req.body || {}));
+    console.log('[SCIM PATCH] operations count:', operations.length);
 
     for (const op of operations) {
       const tipo  = (op.op || '').toLowerCase();
