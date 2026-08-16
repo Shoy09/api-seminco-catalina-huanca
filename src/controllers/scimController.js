@@ -275,6 +275,9 @@ exports.actualizarUsuario = async (req, res) => {
     const operations = req.body.Operations || [];
     const cambios    = {};
 
+    // LOG TEMPORAL — ver exactamente qué envía EntraID en el PATCH
+    console.log('[SCIM PATCH] body recibido:', JSON.stringify(req.body, null, 2));
+
     for (const op of operations) {
       const tipo  = (op.op || '').toLowerCase();
       const path  = op.path;
@@ -285,11 +288,22 @@ exports.actualizarUsuario = async (req, res) => {
         if (path === 'active') {
           cambios.activo = value ? 1 : 0;
         }
-        // Actualización de campos básicos
+        // Actualización de campos básicos — path como string directo
         if (path === 'userName')                     cambios.correo    = value;
         if (path === 'name.givenName')               cambios.nombres   = value || 'Sin nombre';
         if (path === 'name.familyName')              cambios.apellidos = value || 'Sin apellido';
         if (path === 'emails[type eq "work"].value') cambios.correo    = value;
+
+        // PATCH con path: "name" y value como objeto { givenName, familyName }
+        // EntraID usa este formato según la versión del conector
+        if (path === 'name' && typeof value === 'object' && value !== null) {
+          if (value.givenName  !== undefined) cambios.nombres   = value.givenName  || 'Sin nombre';
+          if (value.familyName !== undefined) cambios.apellidos = value.familyName || 'Sin apellido';
+          if (value.formatted  !== undefined && !value.givenName && !value.familyName) {
+            // formatted solo si no vinieron los campos individuales
+            cambios.nombres = value.formatted || 'Sin nombre';
+          }
+        }
 
         // PATCH sin path: objeto completo (EntraID lo hace a veces)
         if (!path && typeof value === 'object') {
