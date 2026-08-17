@@ -50,7 +50,7 @@ function fromScim(body) {
     // Fallback a 'Sin nombre' para respetar allowNull:false del modelo
     nombres:   body.name?.givenName  || 'Sin nombre',
     apellidos: body.name?.familyName || 'Sin apellido',
-    activo:    body.active !== false ? 1 : 0,
+    activo:    (typeof body.active === 'string' ? body.active.toLowerCase() !== 'false' : body.active !== false) ? 1 : 0,
   };
 }
 
@@ -275,6 +275,12 @@ exports.actualizarUsuario = async (req, res) => {
     const operations = req.body.Operations || [];
     const cambios    = {};
 
+    // Normaliza el valor de 'active' — EntraID puede enviarlo como string "False"/"True"
+    const parseActive = (v) => {
+      if (typeof v === 'string') return v.toLowerCase() !== 'false';
+      return Boolean(v);
+    };
+
     for (const op of operations) {
       const tipo  = (op.op || '').toLowerCase();
       const path  = op.path;
@@ -283,7 +289,7 @@ exports.actualizarUsuario = async (req, res) => {
       if (tipo === 'replace') {
         // Caso más común: desactivar usuario
         if (path === 'active') {
-          cambios.activo = value ? 1 : 0;
+          cambios.activo = parseActive(value) ? 1 : 0;
         }
         // Actualización de campos básicos — path como string directo
         if (path === 'userName')                     cambios.correo    = value;
@@ -316,7 +322,7 @@ exports.actualizarUsuario = async (req, res) => {
 
       // EntraID también puede usar 'add' para activar usuarios
       if (tipo === 'add' && path === 'active') {
-        cambios.activo = value ? 1 : 0;
+        cambios.activo = parseActive(value) ? 1 : 0;
       }
 
       // Operación remove — limpiar campos SCIM (nunca campos de negocio)
