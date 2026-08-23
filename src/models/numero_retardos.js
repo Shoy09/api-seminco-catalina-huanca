@@ -7,15 +7,20 @@ const NumeroRetardos = sequelize.define('NumeroRetardos', {
         primaryKey: true,
         autoIncrement: true
     },
-    mes: {
+    longitud: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
+    },
+    tipo: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    anio: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+    codigo: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
     },
-    cantidad: {
+    enumeracion: {
         type: DataTypes.INTEGER,
         allowNull: false
     }

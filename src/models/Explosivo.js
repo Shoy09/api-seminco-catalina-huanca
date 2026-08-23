@@ -26,6 +26,11 @@ const Explosivo = sequelize.define('Explosivo', {
     unidad_medida: {
         type: DataTypes.STRING,
         allowNull: false
+    },
+    codigo: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
     }
 }, {
     tableName: 'explosivos',

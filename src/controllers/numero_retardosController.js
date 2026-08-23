@@ -13,12 +13,13 @@ const numeroRetardosController = {
 
     create: async (req, res) => {
         try {
-            const { mes, anio, cantidad } = req.body;
+            const { longitud, tipo, codigo, enumeracion } = req.body;
 
             const registro = await NumeroRetardos.create({
-                mes,
-                anio,
-                cantidad
+                longitud,
+                tipo,
+                codigo,
+                enumeracion
             });
 
             res.status(201).json({
@@ -38,7 +39,7 @@ const numeroRetardosController = {
     update: async (req, res) => {
         try {
             const { id } = req.params;
-            const { mes, anio, cantidad } = req.body;
+            const { longitud, tipo, codigo, enumeracion } = req.body;
 
             const registro = await NumeroRetardos.findByPk(id);
 
@@ -47,9 +48,10 @@ const numeroRetardosController = {
             }
 
             await registro.update({
-                mes,
-                anio,
-                cantidad
+                longitud,
+                tipo,
+                codigo,
+                enumeracion
             });
 
             res.json(registro);
@@ -78,39 +80,39 @@ const numeroRetardosController = {
         }
     },
 
-    getByAnio: async (req, res) => {
+    getByTipo: async (req, res) => {
         try {
-            const { anio } = req.params;
+            const { tipo } = req.params;
 
             const registros = await NumeroRetardos.findAll({
-                where: { anio }
+                where: { tipo }
             });
 
             res.json(registros);
 
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: 'Error al obtener registros por año' });
+            res.status(500).json({ error: 'Error al obtener registros por tipo' });
         }
     },
 
     getLast: async (req, res) => {
-    try {
-        const registro = await NumeroRetardos.findOne({
-            order: [['id', 'DESC']]
-        });
+        try {
+            const registro = await NumeroRetardos.findOne({
+                order: [['id', 'DESC']]
+            });
 
-        if (!registro) {
-            return res.status(404).json({ error: 'No hay registros' });
+            if (!registro) {
+                return res.status(404).json({ error: 'No hay registros' });
+            }
+
+            res.json(registro);
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Error al obtener el último registro' });
         }
-
-        res.json(registro);
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error al obtener el último registro' });
     }
-}
 
 };
 

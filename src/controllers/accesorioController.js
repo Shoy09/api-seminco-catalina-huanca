@@ -24,7 +24,8 @@ exports.getAccesorioById = async (req, res) => {
 // Crear un accesorio
 exports.createAccesorio = async (req, res) => {
     try {
-        const nuevoAccesorio = await Accesorio.create(req.body);
+        const { tipo_accesorio, costo, unidad_medida, codigo } = req.body;
+        const nuevoAccesorio = await Accesorio.create({ tipo_accesorio, costo, unidad_medida, codigo });
         res.status(201).json(nuevoAccesorio);
     } catch (error) {
         res.status(500).json({ error: 'Error al crear el accesorio' });
@@ -37,7 +38,8 @@ exports.updateAccesorio = async (req, res) => {
         const accesorio = await Accesorio.findByPk(req.params.id);
         if (!accesorio) return res.status(404).json({ error: 'Accesorio no encontrado' });
 
-        await accesorio.update(req.body);
+        const { tipo_accesorio, costo, unidad_medida, codigo } = req.body;
+        await accesorio.update({ tipo_accesorio, costo, unidad_medida, codigo });
         res.json(accesorio);
     } catch (error) {
         res.status(500).json({ error: 'Error al actualizar el accesorio' });

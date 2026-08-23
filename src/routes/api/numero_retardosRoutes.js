@@ -5,7 +5,7 @@ const verificarToken = require('../../middleware/auth');
 
 router.get('/', verificarToken, numeroRetardosController.getAll);
 router.get('/ultimo', verificarToken, numeroRetardosController.getLast);
-router.get('/anio/:anio', verificarToken, numeroRetardosController.getByAnio);
+router.get('/tipo/:tipo', verificarToken, numeroRetardosController.getByTipo);
 
 router.post('/', verificarToken, numeroRetardosController.create);
 router.put('/:id', verificarToken, numeroRetardosController.update);

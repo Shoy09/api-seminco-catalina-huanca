@@ -19,6 +19,11 @@ const Accesorio = sequelize.define('Accesorio', {
     unidad_medida: {
         type: DataTypes.STRING,
         allowNull: false
+    },
+    codigo: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
     }
 }, {
     tableName: 'accesorios',

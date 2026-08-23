@@ -9,15 +9,20 @@ module.exports = {
         primaryKey: true,
         allowNull: false
       },
-      mes: {
+      longitud: {
+        type: Sequelize.DECIMAL(10, 2),
+        allowNull: false
+      },
+      tipo: {
         type: Sequelize.STRING,
         allowNull: false
       },
-      anio: {
-        type: Sequelize.INTEGER,
-        allowNull: false
+      codigo: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true
       },
-      cantidad: {
+      enumeracion: {
         type: Sequelize.INTEGER,
         allowNull: false
       }

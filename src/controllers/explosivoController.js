@@ -24,7 +24,8 @@ exports.getExplosivoById = async (req, res) => {
 // Crear un explosivo
 exports.createExplosivo = async (req, res) => {
     try {
-        const nuevoExplosivo = await Explosivo.create(req.body);
+        const { tipo_explosivo, cantidad_por_caja, peso_unitario, costo_por_kg, unidad_medida, codigo } = req.body;
+        const nuevoExplosivo = await Explosivo.create({ tipo_explosivo, cantidad_por_caja, peso_unitario, costo_por_kg, unidad_medida, codigo });
         res.status(201).json(nuevoExplosivo);
     } catch (error) {
         res.status(500).json({ error: 'Error al crear el explosivo' });
@@ -37,7 +38,8 @@ exports.updateExplosivo = async (req, res) => {
         const explosivo = await Explosivo.findByPk(req.params.id);
         if (!explosivo) return res.status(404).json({ error: 'Explosivo no encontrado' });
 
-        await explosivo.update(req.body);
+        const { tipo_explosivo, cantidad_por_caja, peso_unitario, costo_por_kg, unidad_medida, codigo } = req.body;
+        await explosivo.update({ tipo_explosivo, cantidad_por_caja, peso_unitario, costo_por_kg, unidad_medida, codigo });
         res.json(explosivo);
     } catch (error) {
         res.status(500).json({ error: 'Error al actualizar el explosivo' });
