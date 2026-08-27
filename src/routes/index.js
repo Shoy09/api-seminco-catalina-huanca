@@ -32,6 +32,8 @@ const empresaRoutes = require('../routes/api/EmpresaRoutes');
 const toneladasScoopRoutes = require('../routes/api/ToneladasScoopsRoutes');
 const scimRoutes  = require('../routes/api/scimRoutes');
 const notificacionesRoutes = require('../routes/api/notificacionesRoutes');
+const carpetaRoutes = require('../routes/api/carpetaRoutes');
+const pdfOperacion = require('../routes/api/pdfRoutes');
 
 
 router.use('/usuarios', usuariosRoutes);  
@@ -63,7 +65,8 @@ router.use('/guardias', guardiasRutes);
 router.use('/materiales', materialRoutes);
 router.use('/empresas', empresaRoutes);
 router.use('/toneladas-scoops', toneladasScoopRoutes);
-
+router.use('/carpetas', carpetaRoutes); 
+router.use('/pdf-operacion', pdfOperacion); 
 
  
 // ── SCIM: EntraID llama a estos endpoints para crear/actualizar/desactivar usuarios
