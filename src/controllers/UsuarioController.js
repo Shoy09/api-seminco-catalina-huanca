@@ -48,7 +48,35 @@ exports.obtenerOperadores = [
   }
 ];
 
+exports.obtenerNombresUsuarios = [
+  verificarToken,
+  async (req, res) => {
+    try {
+      // Opción A: Usar Sequelize (tienes el modelo importado)
+      const usuarios = await Usuario.findAll({
+        attributes: ['nombres', 'apellidos', 'id'], // solo los campos necesarios
+        where: {
+          activo: 1 // solo usuarios activos
+        },
+        order: [['apellidos', 'ASC'], ['nombres', 'ASC']]
+      });
 
+      // Formatear para mejor legibilidad
+      const nombresFormateados = usuarios.map(user => ({
+        id: user.id,
+        nombreCompleto: `${user.apellidos}, ${user.nombres}`,
+        apellidos: user.apellidos,
+        nombres: user.nombres
+      }));
+
+      res.status(200).json(nombresFormateados);
+      
+    } catch (error) {
+      console.error('Error al obtener nombres de usuarios:', error);
+      res.status(500).json({ error: 'Error al obtener nombres de usuarios' });
+    }
+  }
+];
 
 exports.obtenerUsuarioPorId = [verificarToken, async (req, res) => {
     const { id } = req.params;

@@ -24,5 +24,7 @@ router.get('/perfil', usuarioController.obtenerPerfil);
 
 router.put('/usuarios/:id/firma', usuarioController.actualizarFirma);
 
+router.get('/usuarios/nombres', usuarioController.obtenerNombresUsuarios);
+
 module.exports = router;
  
