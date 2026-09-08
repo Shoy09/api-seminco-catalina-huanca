@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const tipoLaborController = require("../api/tipoEquipoRoutes");
+const tipoLaborController = require("../../controllers/tipoLaborController");
 const verificarToken = require('../../middleware/auth');
 
 router.get("/", verificarToken, tipoLaborController.getAllTipoLabor);
