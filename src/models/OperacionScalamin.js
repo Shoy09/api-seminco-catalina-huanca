@@ -6,6 +6,7 @@ const OperacionScalamin = sequelize.define('OperacionScalamin', {
     fecha: DataTypes.STRING,
     turno: DataTypes.STRING,
     operador: DataTypes.STRING,
+    guardia: DataTypes.STRING,
     jefe_guardia: DataTypes.STRING,
     equipo: DataTypes.STRING,
     n_equipo: DataTypes.STRING,
