@@ -34,7 +34,7 @@ const scimRoutes  = require('../routes/api/scimRoutes');
 const notificacionesRoutes = require('../routes/api/notificacionesRoutes');
 const carpetaRoutes = require('../routes/api/carpetaRoutes');
 const pdfOperacion = require('../routes/api/pdfRoutes');
-const TipoLabor = require('../routes/api/tipoEquipoRoutes');
+const TipoLabor = require('../routes/api/TipoLaborRoutes');
 
 router.use('/usuarios', usuariosRoutes);  
 router.use('/auth', authRoutes);  
