@@ -11,6 +11,10 @@ const Equipo = sequelize.define('Equipo', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    nombre_excel: {                      // 👈 NUEVO CAMPO
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     proceso: {
         type: DataTypes.STRING,
         allowNull: false

@@ -14,6 +14,7 @@ const equipoController = {
         try {
             const {
                 nombre,
+            nombre_excel,
                 proceso,
                 codigo,
                 marca,
@@ -29,6 +30,7 @@ const equipoController = {
 
             const equipo = await Equipo.create({
                 nombre,
+            nombre_excel,
                 proceso,
                 codigo,
                 marca,
@@ -63,6 +65,7 @@ const equipoController = {
 
             const {
                 nombre,
+            nombre_excel,
                 proceso,
                 codigo,
                 marca,
@@ -86,6 +89,7 @@ const equipoController = {
 
             await equipo.update({
                 nombre,
+            nombre_excel,
                 proceso,
                 codigo,
                 marca,
