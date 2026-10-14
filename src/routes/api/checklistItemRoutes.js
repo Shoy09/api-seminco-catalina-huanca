@@ -3,6 +3,7 @@ const router = express.Router();
 const checklistItemController = require('../../controllers/checklistItemController');
 
 router.get('/', checklistItemController.getAllCheckListItems);
+router.get('/equipo/:equipoId', checklistItemController.getAllCheckListItems);
 router.get('/:id', checklistItemController.getCheckListItemById);
 router.post('/', checklistItemController.createCheckListItem);
 router.put('/:id', checklistItemController.updateCheckListItem);
