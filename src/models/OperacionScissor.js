@@ -6,6 +6,7 @@ const OperacionScissor = sequelize.define('OperacionScissor', {
     fecha: DataTypes.STRING,
     turno: DataTypes.STRING,
     operador: DataTypes.STRING,
+    guardia: DataTypes.STRING,
     jefe_guardia: DataTypes.STRING,
     equipo: DataTypes.STRING,
     n_equipo: DataTypes.STRING,
@@ -38,6 +39,7 @@ const OperacionScissor = sequelize.define('OperacionScissor', {
       type: DataTypes.JSON,
       allowNull: true,
     },
+    Hora_envio: DataTypes.TEXT,
 }, {
     tableName: 'Operacion_scissor',
     timestamps: false
