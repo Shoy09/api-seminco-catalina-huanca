@@ -7,6 +7,7 @@ const verificarToken = require('../../middleware/auth');
 router.get('/horometros/ultimos', verificarToken, controller.obtenerUltimosHorometros);
 router.get('/:tipo/id/:id', verificarToken, controller.obtenerPorId);
 router.get('/:tipo/jefe', verificarToken, controller.obtenerPorJefe);
+router.get('/sync-capabilities', controller.syncCapabilities);
 router.post('/crear', controller.crear);
 router.put('/update-masivo',controller.actualizarMasivo);
 router.get('/:tipo', verificarToken, controller.obtener);

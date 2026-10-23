@@ -1,3 +1,4 @@
+const { createOperation, updateValues } = require('../services/operationSyncIdentity');
 const modelos = require('../models/indexOperaciones');
 const { Op } = require('sequelize');
 
@@ -8,63 +9,52 @@ function obtenerModelo(tipo) {
 }
 
 module.exports = {
+  // Flutter verifica la API desplegada y los índices en su BD real.
+  async syncCapabilities(req, res) {
+    res.set('Cache-Control', 'no-store');
+    try {
+      for (const Model of Object.values(modelos)) {
+        const indexes = await Model.sequelize.getQueryInterface().showIndex(Model.getTableName());
+        const safe = indexes.some(index => index.unique && index.fields.length === 1 &&
+          index.fields[0].attribute === 'sync_uuid');
+        if (!safe) return res.status(503).json({ ok: false, sync_uuid_version: 0 });
+      }
+      return res.json({ ok: true, sync_uuid_version: 1 });
+    } catch (_) {
+      return res.status(503).json({ ok: false, sync_uuid_version: 0 });
+    }
+  },
 
   // ✅ CREAR (uno o varios)
   async crear(req, res) {
-
     try {
-
       const { tipo, data } = req.body;
-
       const Modelo = obtenerModelo(tipo);
-
-      let resultado;
-
-      // =====================================
-      // MÚLTIPLES REGISTROS
-      // =====================================
-      if (Array.isArray(data)) {
-
-        const creados = await Modelo.bulkCreate(data);
-
-        resultado = creados.map((item, index) => ({
-          local_id: data[index].local_id ?? null,
-          server_id: item.id,
-          creado: true
-        }));
-
-      } else {
-
-        // =====================================
-        // UN SOLO REGISTRO
-        // =====================================
-        const creado = await Modelo.create(data);
-
-        resultado = {
-          local_id: data.local_id ?? null,
-          server_id: creado.id,
-          creado: true
-        };
-
+      if (!data || typeof data !== 'object' ||
+          (Array.isArray(data) && data.length === 0)) {
+        return res.status(400).json({ ok: false, error: 'Data debe contener operaciones' });
       }
-
-      res.json({
-        ok: true,
-        data: resultado
-      });
-
+      if (!Array.isArray(data)) {
+        const result = await createOperation(Modelo, data);
+        return res.json({ ok: true, data: result });
+      }
+      const resultados = [];
+      for (const item of data) {
+        try {
+          resultados.push(await createOperation(Modelo, item));
+        } catch (error) {
+          resultados.push({
+            local_id: item?.local_id ?? null, server_id: null,
+            creado: false, error: error.message,
+          });
+        }
+      }
+      return res.json({ ok: true, data: resultados });
     } catch (error) {
-
-      res.status(500).json({
-        ok: false,
-        error: error.message
-      });
-
+      return res.status(500).json({ ok: false, error: error.message });
     }
-
   },
 
-  // ✅ GET (con filtros)
 async obtener(req, res) {
   try {
     const { tipo } = req.params;
@@ -322,7 +312,7 @@ async obtenerPorId(req, res) {
  async actualizar(req, res) {
   try {
     const { tipo, id } = req.params;
-    const data = req.body;
+    const data = updateValues(req.body);
 
     const Modelo = obtenerModelo(tipo);
 
@@ -393,7 +383,7 @@ async actualizarMasivo(req, res) {
         }
 
         // 🔥 quitar idNube antes de actualizar
-        const datosActualizar = { ...item };
+        const datosActualizar = updateValues(item);
 
         delete datosActualizar.idNube;
 

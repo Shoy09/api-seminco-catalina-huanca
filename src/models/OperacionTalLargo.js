@@ -5,6 +5,12 @@ const OperacionTalLargo = sequelize.define(
   "OperacionTalLargo",
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    sync_uuid: {
+        type: DataTypes.STRING(36),
+        allowNull: true,
+        unique: true,
+        validate: { isUUID: 4 }
+    },
     fecha: DataTypes.STRING,
     turno: DataTypes.STRING,
     seccion: DataTypes.STRING,
