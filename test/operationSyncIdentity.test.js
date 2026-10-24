@@ -75,6 +75,7 @@ test('updates preserve remote identity and continue updating operation fields', 
 function controller(Model) {
   const sandbox = { module: { exports: {} }, require(name) {
     if (name === '../models/indexOperaciones') return { tal_horizontal: Model };
+    if (name === '../services/closedTransfer') return require('../src/services/closedTransfer');
     if (name === 'sequelize') return { Op: {} };
     if (name === '../services/operationSyncIdentity') return { createOperation, updateValues };
     throw new Error('Unexpected require: ' + name);

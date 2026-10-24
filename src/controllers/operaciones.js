@@ -1,3 +1,4 @@
+const { confirmClosedTransfer } = require('../services/closedTransfer');
 const { createOperation, updateValues } = require('../services/operationSyncIdentity');
 const modelos = require('../models/indexOperaciones');
 const { Op } = require('sequelize');
@@ -9,6 +10,16 @@ function obtenerModelo(tipo) {
 }
 
 module.exports = {
+  async confirmClosedTransfer(req, res) {
+    try {
+      const { tipo, payload, hash } = req.body;
+      const Model = obtenerModelo(tipo);
+      const result = await confirmClosedTransfer(Model, tipo, payload, hash);
+      return res.json({ ok: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ ok: false, error: error.message });
+    }
+  },
   // Flutter verifica la API desplegada y los índices en su BD real.
   async syncCapabilities(req, res) {
     res.set('Cache-Control', 'no-store');
@@ -19,7 +30,7 @@ module.exports = {
           index.fields[0].attribute === 'sync_uuid');
         if (!safe) return res.status(503).json({ ok: false, sync_uuid_version: 0 });
       }
-      return res.json({ ok: true, sync_uuid_version: 1 });
+      return res.json({ ok: true, sync_uuid_version: 1, closed_transfer_version: 1 });
     } catch (_) {
       return res.status(503).json({ ok: false, sync_uuid_version: 0 });
     }
