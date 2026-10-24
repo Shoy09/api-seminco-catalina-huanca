@@ -99,3 +99,46 @@ test('transfer contract fields exist in all ten real Sequelize models', () => {
     assert.ok(!fields(type).includes('check_list_telemando'));
   }
 });
+test('lookup recovers same UUID and payload without any creation or update', async () => {
+  const { lookupSync } = require('../src/services/closedTransfer');
+  const data = payload(), hash = fingerprint('tal_horizontal', data);
+  const Model = {
+    async findOne({ where }) { assert.equal(where.sync_uuid, uuid); return {
+      id: 800, estado: 'cerrado', toJSON() { return { ...data, id: 800 }; },
+    }; },
+    async create() { assert.fail('No se puede crear desde lookup'); },
+    async update() { assert.fail('No se puede actualizar desde lookup'); },
+    async findOrCreate() { assert.fail('No se puede crear desde lookup'); },
+  };
+  const result = await lookupSync(Model, 'tal_horizontal', data, hash);
+  assert.equal(result.status, 'confirmed'); assert.equal(result.server_id, 800);
+});
+
+test('lookup missing UUID never creates an empty or duplicate record', async () => {
+  const { lookupSync } = require('../src/services/closedTransfer');
+  const data = payload(), hash = fingerprint('tal_horizontal', data);
+  const result = await lookupSync({ async findOne() { return null; } }, 'tal_horizontal', data, hash);
+  assert.equal(result.status, 'missing'); assert.equal(result.server_id, null);
+});
+
+test('lookup different data reports conflict without modifying remote data', async () => {
+  const { lookupSync } = require('../src/services/closedTransfer');
+  const data = payload(), hash = fingerprint('tal_horizontal', data);
+  const remote = { ...data, registros: '[{"otraVersion":true}]' };
+  const result = await lookupSync({ async findOne() { return {
+    id: 800, estado: 'cerrado', toJSON() { return remote; },
+  }; } }, 'tal_horizontal', data, hash);
+  assert.equal(result.status, 'conflict'); assert.equal(result.server_id, 800);
+  assert.equal(remote.registros, '[{"otraVersion":true}]');
+});
+test('lookup active creation identifies ownership without closing or overwriting it', async () => {
+  const { lookupSync } = require('../src/services/closedTransfer');
+  const data = payload(), hash = fingerprint('tal_horizontal', data);
+  const remote = { ...data, estado: 'activo' };
+  const Model = { async findOne() { return { id: 800, estado: remote.estado, toJSON() { return remote; } }; } };
+  const result = await lookupSync(Model, 'tal_horizontal', data, hash);
+  assert.equal(result.status, 'conflict'); assert.equal(result.remote_state, 'activo');
+  assert.equal(result.identity_matches, true); assert.equal(remote.estado, 'activo');
+  remote.operador = 'otro operador';
+  assert.equal((await lookupSync(Model, 'tal_horizontal', data, hash)).identity_matches, false);
+});

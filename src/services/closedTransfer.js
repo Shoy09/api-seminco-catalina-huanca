@@ -74,3 +74,19 @@ async function confirmClosedTransfer(Model, type, payload, hash) {
   });
 }
 module.exports = { fields, content, fingerprint, confirmClosedTransfer };
+
+// Consulta estrictamente de lectura: no crea, no vincula y no actualiza filas.
+module.exports.lookupSync = async function lookupSync(Model, type, payload, hash) {
+  if (!payload || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(payload.sync_uuid) ||
+      fingerprint(type, payload) !== hash) throw new Error('UUID o contenido de consulta invalido');
+  const record = await Model.findOne({ where: { sync_uuid: payload.sync_uuid } });
+  if (!record) return { sync_uuid: payload.sync_uuid, hash, status: 'missing', server_id: null };
+  let matches = false;
+  try { matches = fingerprint(type, record.toJSON()) === hash; } catch (_) {}
+  const remote = record.toJSON();
+  const identityFields = ['fecha', 'turno', 'operador', 'equipo', 'n_equipo', 'n_volquete']
+    .filter(field => fields(type).includes(field));
+  const identityMatches = identityFields.every(field => String(remote[field] ?? '') === String(payload[field] ?? ''));
+  return { sync_uuid: payload.sync_uuid, hash, status: matches ? 'confirmed' : 'conflict',
+    server_id: record.id, remote_state: record.estado, identity_matches: identityMatches };
+};

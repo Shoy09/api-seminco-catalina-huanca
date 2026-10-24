@@ -1,4 +1,4 @@
-const { confirmClosedTransfer } = require('../services/closedTransfer');
+const { confirmClosedTransfer, lookupSync } = require('../services/closedTransfer');
 const { createOperation, updateValues } = require('../services/operationSyncIdentity');
 const modelos = require('../models/indexOperaciones');
 const { Op } = require('sequelize');
@@ -10,6 +10,15 @@ function obtenerModelo(tipo) {
 }
 
 module.exports = {
+  async lookupSync(req, res) {
+    try {
+      const { tipo, payload, hash } = req.body;
+      const result = await lookupSync(obtenerModelo(tipo), tipo, payload, hash);
+      return res.json({ ok: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ ok: false, error: error.message });
+    }
+  },
   async confirmClosedTransfer(req, res) {
     try {
       const { tipo, payload, hash } = req.body;
@@ -30,7 +39,7 @@ module.exports = {
           index.fields[0].attribute === 'sync_uuid');
         if (!safe) return res.status(503).json({ ok: false, sync_uuid_version: 0 });
       }
-      return res.json({ ok: true, sync_uuid_version: 1, closed_transfer_version: 1 });
+      return res.json({ ok: true, sync_uuid_version: 1, closed_transfer_version: 1, lookup_sync_version: 1 });
     } catch (_) {
       return res.status(503).json({ ok: false, sync_uuid_version: 0 });
     }
