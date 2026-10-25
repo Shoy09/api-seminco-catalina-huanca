@@ -77,7 +77,7 @@ function controller(Model) {
     if (name === '../models/indexOperaciones') return { tal_horizontal: Model };
     if (name === '../services/closedTransfer') return require('../src/services/closedTransfer');
     if (name === 'sequelize') return { Op: {} };
-    if (name === '../services/operationSyncIdentity') return { createOperation, updateValues };
+    if (name === '../services/operationSyncIdentity') return require('../src/services/operationSyncIdentity');
     throw new Error('Unexpected require: ' + name);
   } };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/controllers/operaciones.js'), 'utf8'), sandbox);
@@ -106,12 +106,12 @@ test('controller returns per-row confirmation and preserves single-record contra
 
 test('mass update keeps idNube targeting and strips identity from update values', async () => {
   const Model = {
-    async findByPk(id) { return id === 90 ? { id } : null; },
-    async update(values, { where }) {
-      assert.equal(where.id, 90);
+    sequelize: { transaction(action) { return action({ LOCK: { UPDATE: 'UPDATE' } }); } },
+    async findByPk(id) { return id === 90 ? { id, estado: 'activo', async update(values, options) {
+      assert.ok(options.transaction);
       assert.deepEqual(values, { estado: 'cerrado' });
-      return [1];
-    },
+      Object.assign(this, values); return this;
+    } } : null; },
   };
   const res = response();
   await controller(Model).actualizarMasivo({ body: { tipo: 'tal_horizontal', data: [

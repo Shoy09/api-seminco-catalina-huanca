@@ -67,13 +67,35 @@ async function confirmClosedTransfer(Model, type, payload, hash) {
       // Volver a leer con bloqueo: comparar el contenido vigente, no un snapshot.
       record = await Model.findByPk(record.id, { transaction, lock: transaction.LOCK.UPDATE });
     }
+    if (record.estado === 'activo') {
+      const remoteHash = cloudHash(type, record);
+      const suppliedBase = payload.base_cloud_hash;
+      const hasBase = typeof suppliedBase === 'string' && /^[0-9a-f]{64}$/.test(suppliedBase);
+      const expectedBase = hasBase ? suppliedBase : fingerprint(type, { ...payload, estado: 'activo' });
+      const remote = record.toJSON();
+      const sameIdentity = ['fecha', 'turno', 'operador', 'equipo', 'n_equipo', 'n_volquete']
+        .filter(field => fields(type).includes(field))
+        .every(field => String(remote[field] ?? '') === String(payload[field] ?? ''));
+      if (!sameIdentity || !remoteHash || remoteHash !== expectedBase) {
+        return { sync_uuid: payload.sync_uuid, hash, status: 'conflict', server_id: record.id,
+          reason: !sameIdentity ? 'identity_mismatch' : hasBase ? 'remote_changed' : 'missing_base' };
+      }
+      await record.update(defaults, { transaction });
+    }
     let matches = false;
     try { matches = record.estado === 'cerrado' && fingerprint(type, record.toJSON()) === hash; } catch (_) {}
     return { sync_uuid: payload.sync_uuid, hash,
-      status: matches ? 'confirmed' : 'conflict', server_id: record.id };
+      status: matches ? 'confirmed' : 'conflict', server_id: record.id,
+      reason: matches ? null : 'remote_content_differs' };
   });
 }
 module.exports = { fields, content, fingerprint, confirmClosedTransfer };
+
+function cloudHash(type, record) {
+  try { return fingerprint(type, typeof record.toJSON === 'function' ? record.toJSON() : record); }
+  catch (_) { return null; }
+}
+module.exports.cloudHash = cloudHash;
 
 // Consulta estrictamente de lectura: no crea, no vincula y no actualiza filas.
 module.exports.lookupSync = async function lookupSync(Model, type, payload, hash) {
@@ -88,5 +110,6 @@ module.exports.lookupSync = async function lookupSync(Model, type, payload, hash
     .filter(field => fields(type).includes(field));
   const identityMatches = identityFields.every(field => String(remote[field] ?? '') === String(payload[field] ?? ''));
   return { sync_uuid: payload.sync_uuid, hash, status: matches ? 'confirmed' : 'conflict',
-    server_id: record.id, remote_state: record.estado, identity_matches: identityMatches };
+    server_id: record.id, remote_state: record.estado, identity_matches: identityMatches,
+    cloud_hash: cloudHash(type, record) };
 };

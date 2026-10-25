@@ -11,14 +11,21 @@ function payload(type = 'tal_horizontal') {
 }
 function model(type = 'tal_horizontal') {
   const records = new Map();
-  return {
+  let tail = Promise.resolve();
+  const Model = {
     records, writes: 0,
     rawAttributes: Object.fromEntries(fields(type).map(field => [field, {}])),
-    sequelize: { async transaction(action) { return action({ LOCK: { UPDATE: 'UPDATE' } }); } },
+    sequelize: { transaction(action) {
+      const task = tail.then(() => action({ LOCK: { UPDATE: 'UPDATE' } }));
+      tail = task.catch(() => {}); return task;
+    } },
     async findOrCreate({ where, defaults }) {
       if (!records.has(where.sync_uuid)) {
         const row = { ...defaults, id: records.size + 1, toJSON() {
           const copy = { ...this }; delete copy.toJSON; return copy;
+        }, async update(values, options) {
+          assert.ok(options.transaction); Object.assign(this, values); Model.writes++;
+          return this;
         } };
         records.set(where.sync_uuid, row); this.writes++;
       }
@@ -26,6 +33,7 @@ function model(type = 'tal_horizontal') {
     },
     async findByPk(id) { return [...records.values()].find(row => row.id === id) || null; },
   };
+  return Model;
 }
 
 for (const type of ['tal_largo', 'tal_horizontal', 'empernador', 'carguio', 'rompebanco',
@@ -55,6 +63,7 @@ test('open remote operation is not closed by a transferred stale snapshot', asyn
   const Model = model(), data = payload(), hash = fingerprint('tal_horizontal', data);
   await confirmClosedTransfer(Model, 'tal_horizontal', data, hash);
   Model.records.get(uuid).estado = 'activo';
+  Model.records.get(uuid).registros = '[{"cambioPosterior":true}]';
   assert.equal((await confirmClosedTransfer(Model, 'tal_horizontal', data, hash)).status, 'conflict');
   assert.equal(Model.records.get(uuid).estado, 'activo');
 });
@@ -141,4 +150,88 @@ test('lookup active creation identifies ownership without closing or overwriting
   assert.equal(result.identity_matches, true); assert.equal(remote.estado, 'activo');
   remote.operador = 'otro operador';
   assert.equal((await lookupSync(Model, 'tal_horizontal', data, hash)).identity_matches, false);
+});
+
+const { createOperation, updateOperation } = require('../src/services/operationSyncIdentity');
+for (const type of ['tal_largo', 'tal_horizontal', 'empernador', 'carguio', 'rompebanco',
+  'scissor', 'anfochanger', 'scalamin', 'dumper', 'volquetes']) {
+  test(type + ': active online, edit, transfer closes same ID; lost response retry is idempotent', async () => {
+    const Model = model(type);
+    const active = { ...payload(type), estado: 'activo', registros: '[{"avance":1}]' };
+    const created = await createOperation(Model, active, type);
+    assert.equal(created.cloud_hash, fingerprint(type, active));
+    const edited = { ...active, registros: '[{"avance":2}]', base_cloud_hash: created.cloud_hash };
+    const saved = await updateOperation(Model, type, created.server_id, edited);
+    assert.equal(saved.cloud_hash, fingerprint(type, edited));
+    const closed = { ...edited, estado: 'cerrado', registros: '[{"avance":3}]',
+      idNube: created.server_id, base_cloud_hash: saved.cloud_hash };
+    Model.records.get(uuid).aprobado = true;
+    const hash = fingerprint(type, closed);
+    const first = await confirmClosedTransfer(Model, type, closed, hash);
+    const writes = Model.writes;
+    const retry = await confirmClosedTransfer(Model, type, closed, hash);
+    assert.equal(first.status, 'confirmed'); assert.equal(retry.status, 'confirmed');
+    assert.equal(first.server_id, created.server_id); assert.equal(Model.records.size, 1);
+    assert.equal(Model.records.get(uuid).estado, 'cerrado');
+    assert.equal(Model.records.get(uuid).registros, closed.registros);
+    assert.equal(Model.records.get(uuid).aprobado, true);
+    assert.equal(Model.writes, writes);
+    // A delayed active PUT must never reopen the already closed row.
+    await assert.rejects(updateOperation(Model, type, created.server_id, edited), /reabrir/);
+    assert.equal(Model.records.get(uuid).estado, 'cerrado');
+  });
+}
+
+test('active remote changed after confirmed base is not overwritten', async () => {
+  const Model = model();
+  const active = { ...payload(), estado: 'activo', registros: '[{"avance":1}]' };
+  const created = await createOperation(Model, active, 'tal_horizontal');
+  Model.records.get(uuid).registros = '[{"otroCambio":true}]';
+  const closed = { ...active, estado: 'cerrado', registros: '[{"avance":2}]',
+    idNube: created.server_id, base_cloud_hash: created.cloud_hash };
+  const result = await confirmClosedTransfer(Model, 'tal_horizontal', closed, fingerprint('tal_horizontal', closed));
+  assert.equal(result.status, 'conflict'); assert.equal(result.reason, 'remote_changed');
+  assert.equal(Model.records.get(uuid).registros, '[{"otroCambio":true}]');
+  assert.equal(Model.records.get(uuid).estado, 'activo');
+});
+
+test('legacy no-base closes only when business content differs solely in estado', async () => {
+  const Model = model(), active = { ...payload(), estado: 'activo' };
+  await createOperation(Model, active, 'tal_horizontal');
+  const closed = { ...active, estado: 'cerrado' };
+  assert.equal((await confirmClosedTransfer(Model, 'tal_horizontal', closed,
+    fingerprint('tal_horizontal', closed))).status, 'confirmed');
+});
+
+test('no-base differing active content requires review, without writes', async () => {
+  const Model = model(), active = { ...payload(), estado: 'activo' };
+  await createOperation(Model, active, 'tal_horizontal');
+  const closed = { ...active, estado: 'cerrado', registros: '[{"nuevo":true}]' };
+  const writes = Model.writes;
+  const result = await confirmClosedTransfer(Model, 'tal_horizontal', closed, fingerprint('tal_horizontal', closed));
+  assert.equal(result.status, 'conflict'); assert.equal(result.reason, 'missing_base');
+  assert.equal(Model.writes, writes);
+});
+
+test('two master closures from same base serialize; second different version conflicts', async () => {
+  const Model = model(), active = { ...payload(), estado: 'activo' };
+  const created = await createOperation(Model, active, 'tal_horizontal');
+  const a = { ...active, estado: 'cerrado', registros: '[{"avance":2}]', base_cloud_hash: created.cloud_hash };
+  const b = { ...a, registros: '[{"avance":3}]' };
+  const results = await Promise.all([a, b].map(data => confirmClosedTransfer(Model, 'tal_horizontal', data,
+    fingerprint('tal_horizontal', data))));
+  assert.deepEqual(results.map(r => r.status).sort(), ['confirmed', 'conflict']);
+  assert.equal(Model.records.size, 1);
+});
+
+test('normal update retries same content despite old base, but refuses different newer content', async () => {
+  const Model = model(), active = { ...payload(), estado: 'activo' };
+  const created = await createOperation(Model, active, 'tal_horizontal');
+  const next = { ...active, registros: '[{"avance":2}]', base_cloud_hash: created.cloud_hash };
+  await updateOperation(Model, 'tal_horizontal', created.server_id, next);
+  const writes = Model.writes;
+  await updateOperation(Model, 'tal_horizontal', created.server_id, next);
+  assert.equal(Model.writes, writes);
+  await assert.rejects(updateOperation(Model, 'tal_horizontal', created.server_id,
+    { ...next, registros: '[{"obsoleto":true}]' }), /posteriores/);
 });

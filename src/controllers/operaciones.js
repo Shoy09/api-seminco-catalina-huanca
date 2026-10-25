@@ -1,5 +1,5 @@
 const { confirmClosedTransfer, lookupSync } = require('../services/closedTransfer');
-const { createOperation, updateValues } = require('../services/operationSyncIdentity');
+const { createOperation, updateValues, updateOperation } = require('../services/operationSyncIdentity');
 const modelos = require('../models/indexOperaciones');
 const { Op } = require('sequelize');
 
@@ -39,7 +39,7 @@ module.exports = {
           index.fields[0].attribute === 'sync_uuid');
         if (!safe) return res.status(503).json({ ok: false, sync_uuid_version: 0 });
       }
-      return res.json({ ok: true, sync_uuid_version: 1, closed_transfer_version: 1, lookup_sync_version: 1 });
+      return res.json({ ok: true, sync_uuid_version: 1, closed_transfer_version: 1, active_close_transfer_version: 1, lookup_sync_version: 1 });
     } catch (_) {
       return res.status(503).json({ ok: false, sync_uuid_version: 0 });
     }
@@ -55,13 +55,13 @@ module.exports = {
         return res.status(400).json({ ok: false, error: 'Data debe contener operaciones' });
       }
       if (!Array.isArray(data)) {
-        const result = await createOperation(Modelo, data);
+        const result = await createOperation(Modelo, data, tipo);
         return res.json({ ok: true, data: result });
       }
       const resultados = [];
       for (const item of data) {
         try {
-          resultados.push(await createOperation(Modelo, item));
+          resultados.push(await createOperation(Modelo, item, tipo));
         } catch (error) {
           resultados.push({
             local_id: item?.local_id ?? null, server_id: null,
@@ -332,31 +332,16 @@ async obtenerPorId(req, res) {
  async actualizar(req, res) {
   try {
     const { tipo, id } = req.params;
-    const data = updateValues(req.body);
-
     const Modelo = obtenerModelo(tipo);
-
-    const [updated] = await Modelo.update(data, {
-      where: { id }
-    });
-
-    if (updated === 0) {
-      return res.status(404).json({
-        ok: false,
-        error: 'Registro no encontrado'
-      });
-    }
-
-    // 🔥 devolver el registro actualizado
-    const registroActualizado = await Modelo.findByPk(id);
-
+    const result = await updateOperation(Modelo, tipo, id, req.body);
+    const registroActualizado = result.record;
     res.json({
       ok: true,
-      data: registroActualizado
+      data: registroActualizado, cloud_hash: result.cloud_hash
     });
 
   } catch (error) {
-    res.status(500).json({
+    res.status(error.status || 500).json({
       ok: false,
       error: error.message
     });
@@ -403,36 +388,11 @@ async actualizarMasivo(req, res) {
         }
 
         // 🔥 quitar idNube antes de actualizar
-        const datosActualizar = updateValues(item);
-
-        delete datosActualizar.idNube;
-
-        // 🔥 verificar si existe
-        const existe = await Modelo.findByPk(id);
-
-        if (!existe) {
-
-          resultados.push({
-            idNube: id,
-            actualizado: false,
-            error: 'Registro no encontrado'
-          });
-
-          continue;
-
-        }
-
-        // 🔥 actualizar aunque no haya cambios
-        await Modelo.update(
-          datosActualizar,
-          {
-            where: { id }
-          }
-        );
+        const result = await updateOperation(Modelo, tipo, id, item);
 
         resultados.push({
           idNube: id,
-          actualizado: true
+          actualizado: true, cloud_hash: result.cloud_hash
         });
 
       } catch (errorItem) {
