@@ -235,3 +235,69 @@ test('normal update retries same content despite old base, but refuses different
   await assert.rejects(updateOperation(Model, 'tal_horizontal', created.server_id,
     { ...next, registros: '[{"obsoleto":true}]' }), /posteriores/);
 });
+
+const { resolveClosedTransfer } = require('../src/services/closedTransfer');
+
+test('lost PUT response then new edit accepts a durable attempted version, including master closure', async () => {
+  const Model = model(), type = 'tal_horizontal';
+  const active = { ...payload(), estado: 'activo', registros: '[{"avance":1}]' };
+  const created = await createOperation(Model, active, type);
+  const lost = { ...active, registros: '[{"avance":2}]', base_cloud_hash: created.cloud_hash };
+  await updateOperation(Model, type, created.server_id, lost); // response lost
+  const closed = { ...lost, estado: 'cerrado', registros: '[{"avance":3}]',
+    attempted_hashes: [fingerprint(type, active), fingerprint(type, lost)] };
+  const result = await confirmClosedTransfer(Model, type, closed, fingerprint(type, closed));
+  assert.equal(result.status, 'confirmed'); assert.equal(result.server_id, created.server_id);
+  assert.equal(Model.records.size, 1); assert.equal(Model.records.get(uuid).registros, closed.registros);
+});
+
+test('lost POST response then master closes by UUID using persisted original attempt', async () => {
+  const Model = model(), type = 'tal_horizontal';
+  const active = { ...payload(), estado: 'activo', registros: '[{"avance":1}]' };
+  const created = await createOperation(Model, active, type); // response lost; no idNube/base on tablet
+  const closed = { ...active, estado: 'cerrado', registros: '[{"avance":3}]',
+    attempted_hashes: [fingerprint(type, active)] };
+  const result = await confirmClosedTransfer(Model, type, closed, fingerprint(type, closed));
+  assert.equal(result.status, 'confirmed'); assert.equal(result.server_id, created.server_id);
+  assert.equal(Model.records.size, 1);
+});
+
+test('normal PUT accepts own lost intermediate attempt but not a web edit', async () => {
+  const Model = model(), type = 'tal_horizontal';
+  const a = { ...payload(), estado: 'activo' };
+  const created = await createOperation(Model, a, type);
+  const b = { ...a, registros: '[{"avance":2}]', base_cloud_hash: created.cloud_hash };
+  await updateOperation(Model, type, created.server_id, b);
+  const c = { ...b, registros: '[{"avance":3}]', attempted_hashes: [fingerprint(type, b)] };
+  await updateOperation(Model, type, created.server_id, c);
+  Model.records.get(uuid).registros = '[{"edicionWeb":true}]';
+  await assert.rejects(updateOperation(Model, type, created.server_id, c), /posteriores/);
+  assert.equal(Model.records.get(uuid).registros, '[{"edicionWeb":true}]');
+});
+
+test('explicit review can replace chosen closed version, but refuses remote changes after review', async () => {
+  const Model = model(), type = 'tal_horizontal', old = payload();
+  await createOperation(Model, old, type);
+  const chosen = { ...old, registros: '[{"elegidaPorUsuario":true}]', idNube: 1 };
+  const result = await resolveClosedTransfer(Model, type, chosen, fingerprint(type, chosen),
+    { expected_remote_hash: fingerprint(type, old) });
+  assert.equal(result.status, 'confirmed'); assert.equal(result.server_id, 1);
+  const later = { ...chosen, registros: '[{"otraVersion":true}]' };
+  const blocked = await resolveClosedTransfer(Model, type, later, fingerprint(type, later),
+    { expected_remote_hash: fingerprint(type, old) });
+  assert.equal(blocked.status, 'conflict');
+  assert.equal(Model.records.get(uuid).registros, chosen.registros);
+});
+
+test('manual missing recovery requires verified absence and rechecks creation race', async () => {
+  const Model = model(), type = 'tal_horizontal', data = payload(), hash = fingerprint(type, data);
+  Model.findOne = async ({ where }) => Model.records.get(where.sync_uuid) || null;
+  assert.equal((await resolveClosedTransfer(Model, type, data, hash,
+    { expected_remote_hash: null, verified_absent: false })).status, 'conflict');
+  assert.equal(Model.records.size, 0);
+  assert.equal((await resolveClosedTransfer(Model, type, data, hash,
+    { expected_remote_hash: null, verified_absent: true })).status, 'confirmed');
+  assert.equal((await resolveClosedTransfer(Model, type, data, hash,
+    { expected_remote_hash: null, verified_absent: true })).status, 'conflict');
+  assert.equal(Model.records.size, 1);
+});

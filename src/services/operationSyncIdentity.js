@@ -1,5 +1,5 @@
 'use strict';
-const { cloudHash } = require('./closedTransfer');
+const { cloudHash, attemptedVersion } = require('./closedTransfer');
 
 const uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -7,7 +7,7 @@ async function createOperation(Model, payload, type) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     throw new Error('Cada operacion debe ser un objeto');
   }
-  const { local_id, id, idNube, base_cloud_hash, sync_cloud_hash, ...values } = payload;
+  const { local_id, id, idNube, base_cloud_hash, sync_cloud_hash, attempted_hashes, ...values } = payload;
   let record;
   let reused = false;
   if (values.sync_uuid === undefined || values.sync_uuid === null) {
@@ -38,7 +38,7 @@ async function createOperation(Model, payload, type) {
 
 function updateValues(payload) {
   // La identidad de una creacion no puede cambiar por una actualizacion.
-  const { sync_uuid, id, idNube, local_id, base_cloud_hash, sync_cloud_hash, ...values } = payload;
+  const { sync_uuid, id, idNube, local_id, base_cloud_hash, sync_cloud_hash, attempted_hashes, ...values } = payload;
   return values;
 }
 
@@ -59,7 +59,7 @@ async function updateOperation(Model, type, id, payload) {
         (typeof payload.base_cloud_hash !== 'string' || !/^[0-9a-f]{64}$/.test(payload.base_cloud_hash))) {
       fail('Huella de version base invalida');
     }
-    if (payload.base_cloud_hash && payload.base_cloud_hash !== currentHash && desiredHash !== currentHash) {
+    if ((payload.base_cloud_hash || Array.isArray(payload.attempted_hashes)) && payload.base_cloud_hash !== currentHash && desiredHash !== currentHash && !attemptedVersion(payload, currentHash)) {
       fail('La nube contiene cambios posteriores; requiere revision');
     }
     if (Object.keys(values).some(key => JSON.stringify(record[key]) !== JSON.stringify(values[key]))) {
