@@ -150,3 +150,72 @@ module.exports.resolveClosedTransfer = async function resolveClosedTransfer(Mode
     return { sync_uuid: payload.sync_uuid, hash, status: 'confirmed', server_id: record.id };
   });
 };
+
+module.exports.resolveSyncConflict = async function resolveSyncConflict(Model, type, payload, hash, review) {
+  if (!payload || !['activo', 'cerrado'].includes(payload.estado) ||
+      fingerprint(type, payload) !== hash ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(payload.sync_uuid)) {
+    throw new Error('Operacion o huella invalida');
+  }
+  if (!review || !(review.expected_remote_hash === null ||
+      /^[0-9a-f]{64}$/.test(review.expected_remote_hash))) {
+    throw new Error('Primero consulta la version de nube');
+  }
+  for (const field of fields(type)) {
+    if (!Model.rawAttributes[field]) throw new Error('Actualizar modelo y tabla: ' + field);
+  }
+  const defaults = Object.fromEntries(fields(type).map(field => [field, payload[field]]));
+  Object.assign(defaults, {
+    sync_uuid: payload.sync_uuid.toLowerCase(),
+    envio: payload.estado === 'cerrado' ? 1 : 0.5,
+  });
+
+  return Model.sequelize.transaction(async transaction => {
+    const lock = { transaction, lock: transaction.LOCK.UPDATE };
+    let record = Number(payload.idNube) > 0
+      ? await Model.findByPk(Number(payload.idNube), lock)
+      : await Model.findOne({ where: { sync_uuid: defaults.sync_uuid }, ...lock });
+    const conflict = reason => ({
+      sync_uuid: defaults.sync_uuid,
+      hash,
+      status: 'conflict',
+      server_id: record?.id ?? null,
+      reason,
+    });
+
+    if (!record) {
+      if (Number(payload.idNube) > 0 ||
+          review.expected_remote_hash !== null ||
+          review.verified_absent !== true) {
+        return conflict('remote_changed');
+      }
+      const [created, inserted] = await Model.findOrCreate({
+        where: { sync_uuid: defaults.sync_uuid },
+        defaults,
+        transaction,
+      });
+      if (!inserted) return conflict('remote_changed');
+      record = await Model.findByPk(created.id, lock);
+    } else {
+      if (record.sync_uuid !== defaults.sync_uuid ||
+          cloudHash(type, record) !== review.expected_remote_hash) {
+        return conflict('remote_changed');
+      }
+      if (record.estado === 'cerrado' && payload.estado === 'activo') {
+        return conflict('cannot_reopen');
+      }
+      await record.update(defaults, { transaction });
+    }
+
+    if (cloudHash(type, record) !== hash) {
+      throw new Error('El contenido guardado no coincide con la version revisada');
+    }
+    return {
+      sync_uuid: defaults.sync_uuid,
+      hash,
+      status: 'confirmed',
+      server_id: record.id,
+      cloud_hash: cloudHash(type, record),
+    };
+  });
+};

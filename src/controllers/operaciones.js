@@ -1,4 +1,4 @@
-const { confirmClosedTransfer, resolveClosedTransfer, lookupSync } = require('../services/closedTransfer');
+const { confirmClosedTransfer, resolveClosedTransfer, resolveSyncConflict, lookupSync } = require('../services/closedTransfer');
 const { createOperation, updateValues, updateOperation } = require('../services/operationSyncIdentity');
 const modelos = require('../models/indexOperaciones');
 const { Op } = require('sequelize');
@@ -31,6 +31,21 @@ module.exports = {
       return res.status(400).json({ ok: false, error: error.message });
     }
   },
+  async resolveSyncConflict(req, res) {
+    try {
+      const { tipo, payload, hash, review } = req.body;
+      const result = await resolveSyncConflict(
+        obtenerModelo(tipo),
+        tipo,
+        payload,
+        hash,
+        review,
+      );
+      return res.json({ ok: true, data: result });
+    } catch (error) {
+      return res.status(400).json({ ok: false, error: error.message });
+    }
+  },
   // Flutter verifica la API desplegada y los índices en su BD real.
   async syncCapabilities(req, res) {
     res.set('Cache-Control', 'no-store');
@@ -41,7 +56,7 @@ module.exports = {
           index.fields[0].attribute === 'sync_uuid');
         if (!safe) return res.status(503).json({ ok: false, sync_uuid_version: 0 });
       }
-      return res.json({ ok: true, sync_uuid_version: 1, closed_transfer_version: 1, active_close_transfer_version: 1, retry_versions_version: 1, transfer_review_version: 1, lookup_sync_version: 1 });
+      return res.json({ ok: true, sync_uuid_version: 1, closed_transfer_version: 1, active_close_transfer_version: 1, retry_versions_version: 1, transfer_review_version: 1, sync_conflict_review_version: 1, lookup_sync_version: 1 });
     } catch (_) {
       return res.status(503).json({ ok: false, sync_uuid_version: 0 });
     }

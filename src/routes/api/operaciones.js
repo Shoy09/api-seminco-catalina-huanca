@@ -9,6 +9,7 @@ router.get('/:tipo/id/:id', verificarToken, controller.obtenerPorId);
 router.get('/:tipo/jefe', verificarToken, controller.obtenerPorJefe);
 router.get('/sync-capabilities', controller.syncCapabilities);
 router.post('/confirm-closed-transfer', controller.confirmClosedTransfer);
+router.post('/resolve-sync-conflict', controller.resolveSyncConflict);
 router.post('/lookup-sync', controller.lookupSync);
 router.post('/crear', controller.crear);
 router.put('/update-masivo',controller.actualizarMasivo);

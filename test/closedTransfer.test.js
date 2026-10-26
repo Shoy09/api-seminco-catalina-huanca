@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { fields, content, fingerprint, confirmClosedTransfer } = require('../src/services/closedTransfer');
+const { fields, content, fingerprint, confirmClosedTransfer, resolveSyncConflict, cloudHash } = require('../src/services/closedTransfer');
 const uuid = 'c734e68b-9fad-4f42-9711-920cc2d4b84e';
 function payload(type = 'tal_horizontal') {
   const json = new Set(['registros', 'horometros', 'condiciones_equipo', 'check_list',
@@ -300,4 +300,68 @@ test('manual missing recovery requires verified absence and rechecks creation ra
   assert.equal((await resolveClosedTransfer(Model, type, data, hash,
     { expected_remote_hash: null, verified_absent: true })).status, 'conflict');
   assert.equal(Model.records.size, 1);
+});
+
+test('sync conflict resolution requires the reviewed remote hash and preserves one UUID', async () => {
+  const Model = model(), type = 'tal_horizontal';
+  const active = { ...payload(), estado: 'activo', registros: '[{"avance":1}]' };
+  const { createOperation } = require('../src/services/operationSyncIdentity');
+  const created = await createOperation(Model, active, type);
+  const remote = Model.records.get(uuid);
+  remote.registros = '[{"cambioNube":true}]';
+  const expected = cloudHash(type, remote);
+  const chosen = {
+    ...active,
+    registros: '[{"cambioLocalElegido":true}]',
+    idNube: created.server_id,
+  };
+  const hash = fingerprint(type, chosen);
+  const result = await resolveSyncConflict(Model, type, chosen, hash, {
+    expected_remote_hash: expected,
+    verified_absent: false,
+  });
+  assert.equal(result.status, 'confirmed');
+  assert.equal(result.server_id, created.server_id);
+  assert.equal(remote.registros, chosen.registros);
+  assert.equal(Model.records.size, 1);
+});
+
+test('sync conflict resolution refuses a remote edit made after inspection', async () => {
+  const Model = model(), type = 'tal_horizontal';
+  const { createOperation } = require('../src/services/operationSyncIdentity');
+  const active = { ...payload(), estado: 'activo' };
+  const created = await createOperation(Model, active, type);
+  const remote = Model.records.get(uuid);
+  const expected = cloudHash(type, remote);
+  remote.registros = '[{"edicionPosterior":true}]';
+  const chosen = { ...active, idNube: created.server_id };
+  const writes = Model.writes;
+  const result = await resolveSyncConflict(
+    Model,
+    type,
+    chosen,
+    fingerprint(type, chosen),
+    { expected_remote_hash: expected, verified_absent: false },
+  );
+  assert.equal(result.status, 'conflict');
+  assert.equal(remote.registros, '[{"edicionPosterior":true}]');
+  assert.equal(Model.writes, writes);
+});
+
+test('sync conflict resolution never reopens a closed remote operation', async () => {
+  const Model = model(), type = 'tal_horizontal';
+  const { createOperation } = require('../src/services/operationSyncIdentity');
+  const closed = payload();
+  const created = await createOperation(Model, closed, type);
+  const chosen = { ...closed, estado: 'activo', idNube: created.server_id };
+  const result = await resolveSyncConflict(
+    Model,
+    type,
+    chosen,
+    fingerprint(type, chosen),
+    { expected_remote_hash: cloudHash(type, Model.records.get(uuid)) },
+  );
+  assert.equal(result.status, 'conflict');
+  assert.equal(result.reason, 'cannot_reopen');
+  assert.equal(Model.records.get(uuid).estado, 'cerrado');
 });
