@@ -25,6 +25,10 @@ app.use(cors({
   credentials: true,
 }));
 
+// Foto de Taladro largo: parser dedicado (12 MB) y permiso master antes del cuerpo.
+// Debe montarse antes de express.json global, que conserva su límite de 10 MB.
+const { createTalLargoPhotoRouter } = require('./routes/api/talLargoPhotoRoutes');
+app.use('/api/tal-largo', createTalLargoPhotoRouter());
 // ── Body parsers ──────────────────────────────────────────────────────────────
 // Azure Entra ID envía Content-Type: application/scim+json
 // express.json() por defecto solo acepta application/json → body queda vacío
