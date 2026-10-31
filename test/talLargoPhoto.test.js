@@ -58,6 +58,13 @@ test('each sheet has its own route; unknown processes are not exposed', async t 
   assert.equal((await f.request({ path: '/api/otro/preview' })).status, 404);
   assert.equal(f.calls(), 2);
 });
+test('validated Taladro Largo prompt is not changed by other sheets', () => {
+  // Validado con hojas reales (commit 1714c2e). Si cambias el texto a propósito,
+  // vuelve a probar con fotos reales y actualiza este hash.
+  const hash = require('node:crypto').createHash('sha256')
+    .update(procesos['tal-largo'].instructions).digest('hex');
+  assert.equal(hash, 'c676f476e489b52b2f50ba0ff3350f53f2a375703558a6849f44c3084bdfd5ea');
+});
 test('horizontal sheet asks for its own columns and the five footer meters', async () => {
   const config = procesos['tal-horizontal'];
   const actividad = config.schema.properties.actividades.items.properties;
@@ -159,9 +166,8 @@ test('Gemini request includes footer horometers and validates the entire output'
       const body = JSON.parse(options.body);
       assert.match(body.systemInstruction.parts[0].text, /al pie de la tabla/);
       assert.match(body.systemInstruction.parts[0].text, /H\. MOTOR corresponde a horometros\.diesel/);
-      // La labor solo sale de UBICACIÓN; N° DE FILA nunca es labor.
-      assert.match(body.systemInstruction.parts[0].text, /SOLO en la columna UBICACIÓN/);
-      assert.match(body.systemInstruction.parts[0].text, /N° DE FILA[\s\S]*NUNCA labor/);
+      // Texto validado con hojas reales: UBICACIÓN es la labor completa.
+      assert.match(body.systemInstruction.parts[0].text, /La columna UBICACIÓN es la labor/);
       assert.equal(body.contents[0].parts[1].inlineData.data, image.image);
       assert.equal(body.generationConfig.responseJsonSchema.properties.actividades.maxItems, undefined);
       assert.equal(body.generationConfig.responseJsonSchema.properties.actividades.items
