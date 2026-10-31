@@ -122,6 +122,11 @@ test('Gemini request includes footer horometers and validates the entire output'
       assert.match(body.systemInstruction.parts[0].text, /al pie de la tabla/);
       assert.match(body.systemInstruction.parts[0].text, /H\. MOTOR corresponde a horometros\.diesel/);
       assert.equal(body.contents[0].parts[1].inlineData.data, image.image);
+      assert.equal(body.generationConfig.responseJsonSchema.properties.actividades.maxItems, undefined);
+      assert.equal(body.generationConfig.responseJsonSchema.properties.actividades.items
+        .properties.barras.maxItems, undefined);
+      assert.equal(schema.properties.actividades.maxItems, 100);
+      assert.equal(schema.properties.actividades.items.properties.barras.maxItems, 200);
       const draft = empty();
       draft.horometros = {
         diesel: { inicio: '2660.6', final: '2661.3' },

@@ -53,6 +53,8 @@ Acepta JPG/PNG, máximo 8 MB binarios (aproximadamente 10.7 MB base64). El parse
 de esta ruta se monta antes del parser global de 10 MB. Autentica antes de
 interpretar el cuerpo grande. La respuesta conserva el esquema de la app:
 `cabecera`, `actividades` con sus `barras`, `horometros` y `advertencias`.
+Los límites de cantidad de actividades, barras y advertencias se validan en el
+backend; no se envía `maxItems` en el esquema a Gemini porque la API lo rechaza.
 
 Gemini recibe instrucciones para agrupar los taladros dentro de cada actividad,
 conservar la secuencia al cruzar medianoche y leer los horómetros de la franja
