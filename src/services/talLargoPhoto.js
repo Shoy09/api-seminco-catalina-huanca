@@ -56,6 +56,9 @@ Conserva todos los decimales visibles. Si falta o no se distingue una lectura,
 devuelve null y una advertencia específica; no la calcules con otras lecturas.
 No confundas cantidad de barras con cantidad de taladros. No uses cero para
 representar datos ausentes. Conserva observaciones y traslados en su actividad.
+La columna UBICACIÓN es la labor (ej. TJ 493): devuélvela en labor tal como está
+escrita. A veces se escribe una sola vez, incluso en vertical, abarcando las filas
+de varias actividades: repítela en cada actividad de perforación que abarca.
 No devuelvas firmas. Si la hoja está cortada, borrosa o no corresponde, avisa.
 El master revisará y corregirá todo antes de guardar.`;
 
