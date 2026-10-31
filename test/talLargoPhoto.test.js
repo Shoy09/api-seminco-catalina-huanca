@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { createTalLargoPhotoRouter } = require('../src/routes/api/talLargoPhotoRoutes');
-const { schema, validOutput, readTalLargoPhoto } = require('../src/services/talLargoPhoto');
+const { procesos, schema, validOutput, readPhoto, readTalLargoPhoto } = require('../src/services/talLargoPhoto');
 
 const secret = 'test-only-photo-import-secret';
 const image = { mimeType: 'image/jpeg', image: Buffer.from([255,216,255,224]).toString('base64'), catalogo: [] };
@@ -23,10 +23,15 @@ async function fixture(t, { user = { id: 7, rol: 'Master', activo: 1 }, readPhot
     else process.env.JWT_SECRET = oldSecret;
   });
   let calls = 0, userLookups = 0;
+  const procesosLeidos = [];
   const app = express();
-  app.use('/api/tal-largo', createTalLargoPhotoRouter({
+  app.use('/api', createTalLargoPhotoRouter({
     findUser: async id => { userLookups++; assert.equal(id, 7); return user; },
-    readPhoto: async (...args) => { calls++; return readPhoto ? readPhoto(...args) : empty(); },
+    readPhoto: async (...args) => {
+      calls++;
+      procesosLeidos.push(args[1].proceso);
+      return readPhoto ? readPhoto(...args) : empty();
+    },
     dailyLimit, now,
   }));
   app.use(express.json({ limit: '10mb' }));
@@ -40,8 +45,41 @@ async function fixture(t, { user = { id: 7, rol: 'Master', activo: 1 }, readPhot
       method: 'POST', headers: { Authorization: auth, 'Content-Type': 'application/json' },
       body: raw ?? JSON.stringify(body),
     });
-  return { request, calls: () => calls, lookups: () => userLookups };
+  return { request, calls: () => calls, lookups: () => userLookups, procesos: () => procesosLeidos };
 }
+
+test('each sheet has its own route; unknown processes are not exposed', async t => {
+  let clock = Date.now();
+  const f = await fixture(t, { now: () => clock });
+  assert.equal((await f.request()).status, 200);
+  clock += 11000;
+  assert.equal((await f.request({ path: '/api/tal-horizontal/preview' })).status, 200);
+  assert.deepEqual(f.procesos(), ['tal-largo', 'tal-horizontal']);
+  assert.equal((await f.request({ path: '/api/otro/preview' })).status, 404);
+  assert.equal(f.calls(), 2);
+});
+test('horizontal sheet asks for its own columns and the five footer meters', async () => {
+  const config = procesos['tal-horizontal'];
+  const actividad = config.schema.properties.actividades.items.properties;
+  for (const k of ['labor', 'tal_prod', 'tal_rimados', 'long_barras', 'material', 'tipo_perforacion']) {
+    assert.ok(actividad[k], k);
+  }
+  assert.equal(actividad.barras, undefined);
+  assert.deepEqual(Object.keys(config.schema.properties.horometros.properties),
+    ['diesel', 'electrico', 'percusion', 'electrico2', 'percusion2']);
+  await readPhoto(image, {
+    proceso: 'tal-horizontal', apiKey: 'test-key', model: 'test-model',
+    fetchImpl: async (url, options) => {
+      const body = JSON.parse(options.body);
+      assert.match(body.systemInstruction.parts[0].text, /JUMBO FRONTONERO/);
+      assert.match(body.systemInstruction.parts[0].text, /EXACTAMENTE como están escritas/);
+      return Response.json({ candidates: [{ finishReason: 'STOP',
+        content: { parts: [{ text: JSON.stringify(empty(config.schema)) }] } }] });
+    },
+  });
+  await assert.rejects(readPhoto(image, { proceso: 'otro', apiKey: 'k', model: 'm' }),
+    e => e.status === 404);
+});
 
 test('authenticated master receives only a draft using the existing JWT', async t => {
   const f = await fixture(t);
@@ -121,6 +159,9 @@ test('Gemini request includes footer horometers and validates the entire output'
       const body = JSON.parse(options.body);
       assert.match(body.systemInstruction.parts[0].text, /al pie de la tabla/);
       assert.match(body.systemInstruction.parts[0].text, /H\. MOTOR corresponde a horometros\.diesel/);
+      // La labor solo sale de UBICACIÓN; N° DE FILA nunca es labor.
+      assert.match(body.systemInstruction.parts[0].text, /SOLO en la columna UBICACIÓN/);
+      assert.match(body.systemInstruction.parts[0].text, /N° DE FILA[\s\S]*NUNCA labor/);
       assert.equal(body.contents[0].parts[1].inlineData.data, image.image);
       assert.equal(body.generationConfig.responseJsonSchema.properties.actividades.maxItems, undefined);
       assert.equal(body.generationConfig.responseJsonSchema.properties.actividades.items

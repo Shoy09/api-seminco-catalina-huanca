@@ -1,14 +1,15 @@
 'use strict';
 const express = require('express');
 const verificarToken = require('../../middleware/auth');
-const { validateImage, readTalLargoPhoto } = require('../../services/talLargoPhoto');
+const { procesos, validateImage, readPhoto: readPhotoService } = require('../../services/talLargoPhoto');
 
+/** Montar en /api: expone POST /api/<proceso>/preview para cada hoja soportada. */
 function createTalLargoPhotoRouter({
   auth = verificarToken,
   findUser = id => require('../../models/Usuario').findByPk(id, {
     attributes: ['id', 'rol', 'activo'],
   }),
-  readPhoto = readTalLargoPhoto,
+  readPhoto = readPhotoService,
   dailyLimit = Number(process.env.PHOTO_IMPORT_DAILY_LIMIT ?? 50),
   now = Date.now,
 } = {}) {
@@ -31,8 +32,11 @@ function createTalLargoPhotoRouter({
   };
 
   // Montar antes del parser general: 8 MB binarios ocupan ~10.7 MB en base64.
-  router.post('/preview', auth, requireMaster,
+  // La cuota de lecturas es por usuario y compartida entre procesos.
+  const rutas = Object.keys(procesos).map(p => `/${p}/preview`);
+  router.post(rutas, auth, requireMaster,
     express.json({ limit: '12mb', strict: true }), async (req, res) => {
+      const proceso = req.path.split('/')[1];
       let quota;
       let acquired = false;
       const controller = new AbortController();
@@ -60,7 +64,7 @@ function createTalLargoPhotoRouter({
         quota.count++;
         quota.last = now();
         users.set(key, quota);
-        const draft = await readPhoto(req.body, { signal: controller.signal });
+        const draft = await readPhoto(req.body, { proceso, signal: controller.signal });
         if (!res.destroyed) res.json(draft);
       } catch (e) {
         if (!res.destroyed) {
