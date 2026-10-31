@@ -65,6 +65,20 @@ test('validated Taladro Largo prompt is not changed by other sheets', () => {
     .update(procesos['tal-largo'].instructions).digest('hex');
   assert.equal(hash, 'c676f476e489b52b2f50ba0ff3350f53f2a375703558a6849f44c3084bdfd5ea');
 });
+test('empernador sheet has its own route, columns and footer fallback', async t => {
+  const f = await fixture(t);
+  assert.equal((await f.request({ path: '/api/empernador/preview' })).status, 200);
+  assert.deepEqual(f.procesos(), ['empernador']);
+  const config = procesos.empernador;
+  const actividad = config.schema.properties.actividades.items.properties;
+  for (const k of ['tald_perf', 'long_perf', 'ss7', 'sw7', 'ph7', 'malla_c10', 'malla_eslabonada']) {
+    assert.ok(actividad[k], k);
+  }
+  assert.deepEqual(Object.keys(config.schema.properties.horometros.properties),
+    ['diesel', 'electrico', 'percusion', 'empernador']);
+  assert.match(config.instructions, /EMPERNADOR - BOLTEC/);
+  assert.match(config.instructions, /primer H\. INICIAL escrito en las filas/);
+});
 test('horizontal sheet asks for its own columns and the five footer meters', async () => {
   const config = procesos['tal-horizontal'];
   const actividad = config.schema.properties.actividades.items.properties;

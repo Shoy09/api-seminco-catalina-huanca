@@ -142,6 +142,37 @@ HORÓMETRO PERCUSIÓN-2 → percusion2. No intercambies percusión con eléctric
   },
 };
 
+procesos.empernador = {
+  schema: buildSchema({
+    actividad: ['labor', 'tald_perf', 'long_perf', 'ss3', 'ss7', 'sw7', 'ph7',
+      'malla_c10', 'malla_c8', 'malla_eslabonada', 'tipo_perforacion', 'observaciones'],
+    horometros: ['diesel', 'electrico', 'percusion', 'empernador'],
+  }),
+  instructions: `Extrae un borrador de un REPORTE DIARIO DE PERFORACIÓN DE
+EMPERNADOR - BOLTEC (sostenimiento).
+${comunes}
+Columnas de cada fila: N°, CÓDIGO, HORA INICIO y FIN, H. DE MOTOR, H. DE
+PERCUSIÓN y H. ELÉCTRICO (inicial/final por fila), LABOR, N° TALD. PERF. →
+tald_perf, LONG. PERF. → long_perf, cantidad de pernos SS 3' → ss3, SS 7' → ss7,
+SW 7' → sw7, PH 7' → ph7, MALLA M2 C-10 → malla_c10, MALLA M2 C-8 → malla_c8,
+MALLA M2 Eslabonada → malla_eslabonada (metros cuadrados, sin "m2"), TIPO DE
+LABOR → tipo_perforacion con el texto escrito (ej. NICHO, FRENTE, REALCE),
+OBSERVACIONES → observaciones.
+Los datos de perforación, pernos y malla pertenecen a la actividad de
+perforación (101 o 102) aunque estén escritos desplazados hacia las filas de
+abajo; nunca a un 103-106 ni a una demora. Las observaciones largas (ej.
+"manguera hidráulica", "falta lanzar shotcrete") pueden cruzar varias columnas:
+no las confundas con números de pernos o mallas.
+La labor está SOLO en la columna LABOR. Las letras pueden estar escritas debajo o
+al lado del número (ej. "TJ" bajo "4026"): júntalas como "TJ 4026". Devuélvela
+solo en la fila donde está escrita; la aplicación la repite.
+Horómetros: H. DE MOTOR → diesel; H. DE PERCUSIÓN → percusion; H. ELÉCTRICO →
+electrico; empernador → null. Usa la franja del pie. Si en el pie no hay valores
+escritos, usa como INICIO el primer H. INICIAL escrito en las filas y como FINAL
+el último H. FINAL escrito en las filas de ese mismo horómetro, y avisa en
+advertencias que se tomaron de las filas.`,
+};
+
 // Gemini no acepta maxItems; la respuesta se valida después con el esquema completo.
 for (const p of Object.values(procesos)) {
   p.geminiSchema = JSON.parse(JSON.stringify(p.schema));
