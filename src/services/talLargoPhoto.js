@@ -6,13 +6,15 @@ const obj = (keys, extra = {}) => ({ type: 'object',
   required: [...keys, ...Object.keys(extra)], additionalProperties: false });
 
 /** Cabecera común; cada proceso define sus columnas por actividad y horómetros. */
-function buildSchema({ actividad, barras, horometros }) {
+function buildSchema({ actividad, barras, viajes, horometros }) {
   return obj([], {
     cabecera: obj(['fecha', 'turno', 'seccion', 'operador', 'ayudante',
       'jefe_guardia', 'equipo', 'n_equipo', 'modelo_equipo']),
     actividades: { type: 'array', maxItems: 100, items: obj(
-      ['codigo', 'hora_inicio', 'hora_final', ...actividad],
-      barras ? { barras: { type: 'array', maxItems: 200, items: obj(barras) } } : {},
+      ['codigo', 'hora_inicio', 'hora_final', ...actividad], {
+        ...(barras ? { barras: { type: 'array', maxItems: 200, items: obj(barras) } } : {}),
+        ...(viajes ? { viajes: { type: 'array', maxItems: 20, items: obj(viajes) } } : {}),
+      },
     ) },
     horometros: obj([], Object.fromEntries(horometros.map(k => [k, obj(['inicio', 'final'])]))),
     advertencias: { type: 'array', maxItems: 100, items: { type: 'string' } },
@@ -171,6 +173,74 @@ electrico; empernador → null. Usa la franja del pie. Si en el pie no hay valor
 escritos, usa como INICIO el primer H. INICIAL escrito en las filas y como FINAL
 el último H. FINAL escrito en las filas de ese mismo horómetro, y avisa en
 advertencias que se tomaron de las filas.`,
+};
+
+procesos.scalamin = {
+  schema: buildSchema({
+    actividad: ['labor', 'metros_lineales', 'area_m2', 'tipo_labor_texto', 'observaciones'],
+    horometros: ['diesel', 'percusion'],
+  }),
+  instructions: `Extrae un borrador de un REPORTE DIARIO DE EQUIPO DESATADOR
+(scaler / Scalamin).
+${comunes}
+Columnas de cada fila: N°, CÓDIGO, HORA INICIO y FIN, H. DE MOTOR y H. DE
+PERCUSIÓN (inicial/final por fila: NO las devuelvas), LABOR, METROS LINEALES →
+metros_lineales, ÁREA (m2) → area_m2, TIPO DE LABOR → tipo_labor_texto con la
+letra tal como está (F, B, R, D, S o I), OBSERVACIONES → observaciones.
+Las observaciones largas (ej. "ajuste de perno de rompedor", "obstrucción de vía")
+pueden cruzar varias columnas: no las confundas con labor ni con números.
+La labor está SOLO en la columna LABOR y se devuelve en la fila donde está
+escrita. En las actividades de desatado (101) es la labor trabajada (ej.
+TJ5181, CX3828). En los traslados (105) suele indicar origen y destino (ej.
+"P.7 TJ5181"): devuélvela completa tal como está escrita.
+Horómetros del pie: HORÓMETRO DE MOTOR → diesel; HORÓMETRO PERCUSIÓN →
+percusion. No intercambies motor con percusión.`,
+};
+
+procesos.scoop = {
+  schema: buildSchema({
+    actividad: ['tipo_labor', 'observaciones'],
+    viajes: ['origen', 'destino', 'mineral', 'desmonte', 'relleno', 'relave', 'numero_volquete'],
+    horometros: ['horometro'],
+  }),
+  instructions: `Extrae un borrador de un REPORTE DIARIO DE SCOOPTRAM.
+${comunes}
+Columnas de cada fila: N°, CÓDIGO, HORA INICIO y FIN, HORÓMETRO H. INICIAL y
+H. FINAL por fila (NO los devuelvas), DESPLAZAMIENTO (LABOR) ORIGEN y DESTINO,
+# CUCHARAS por material: Miner → mineral, Desmt → desmonte, Relleno → relleno,
+Relave → relave (cantidad tal como está, ej. "16", "05"), TIPO DE LABOR →
+tipo_labor con la letra tal como está (F, B, R, D, S, TL u O), N° DE VOLQUETE →
+numero_volquete, OBSERVACIONES → observaciones.
+Cada desplazamiento (origen, destino, cucharas y volquete) es un elemento de
+viajes de su actividad. Una actividad puede ocupar varias filas: una fila SIN
+código ni horas que solo trae origen, destino y cucharas es otro viaje de la
+actividad de arriba; agrégalo a sus viajes, NO crees una actividad nueva.
+Las actividades sin desplazamiento (demoras, ej. 302, 306) llevan viajes vacío.
+Origen y destino van tal como están escritos (ej. TJ5181, CM5181, V01, SN3828).
+Horómetro: usa la franja HORÓMETRO MOTOR del pie (INICIO y FINAL) →
+horometros.horometro.`,
+};
+
+procesos.scissor = {
+  schema: buildSchema({
+    actividad: ['labor', 'destino', 'ducto', 'cable', 'tuberia', 'tipo_perforacion', 'observaciones'],
+    horometros: ['diesel'],
+  }),
+  instructions: `Extrae un borrador de un REPORTE DIARIO DE EQUIPO UTILITARIO
+(scissor).
+${comunes}
+Columnas de cada fila: N°, CÓDIGO, HORA INICIO y FIN, HORÓMETRO H. INICIAL y
+H. FINAL por fila (NO los devuelvas), UBICACIÓN LABOR → labor, UBICACIÓN
+DESTINO → destino, N° METROS DUCTO → ducto, CABLE → cable, TUBERÍA → tuberia,
+TIPO DE LABOR → tipo_perforacion con la letra tal como está (F, B, R, D, S, M,
+TL u O), OBSERVACIONES → observaciones.
+En LABOR y DESTINO las letras suelen escribirse ARRIBA del número, en dos
+renglones de la misma celda (ej. "CX" arriba y "416" abajo; "P" arriba y "7"
+abajo): júntalas como "CX 416" y "P 7". Devuelve labor y destino solo en la fila
+donde están escritos; no los repitas en otras filas.
+Las observaciones (ej. "se trasladó bombona", "se prolongó manga") van solo en
+observaciones.
+Horómetro: usa la franja HORÓMETRO del pie (INICIO y FINAL) → horometros.diesel.`,
 };
 
 // Gemini no acepta maxItems; la respuesta se valida después con el esquema completo.

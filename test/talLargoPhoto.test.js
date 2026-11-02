@@ -79,6 +79,46 @@ test('empernador sheet has its own route, columns and footer fallback', async t 
   assert.match(config.instructions, /EMPERNADOR - BOLTEC/);
   assert.match(config.instructions, /primer H\. INICIAL escrito en las filas/);
 });
+test('scalamin (desatador) sheet has its own route, columns and two meters', async t => {
+  const f = await fixture(t);
+  assert.equal((await f.request({ path: '/api/scalamin/preview' })).status, 200);
+  assert.deepEqual(f.procesos(), ['scalamin']);
+  const config = procesos.scalamin;
+  const actividad = config.schema.properties.actividades.items.properties;
+  for (const k of ['labor', 'metros_lineales', 'area_m2', 'tipo_labor_texto']) {
+    assert.ok(actividad[k], k);
+  }
+  assert.deepEqual(Object.keys(config.schema.properties.horometros.properties),
+    ['diesel', 'percusion']);
+  assert.match(config.instructions, /EQUIPO DESATADOR/);
+});
+test('scoop sheet groups each origin/destination as a trip of its activity', async t => {
+  const f = await fixture(t);
+  assert.equal((await f.request({ path: '/api/scoop/preview' })).status, 200);
+  assert.deepEqual(f.procesos(), ['scoop']);
+  const config = procesos.scoop;
+  const actividad = config.schema.properties.actividades.items.properties;
+  assert.deepEqual(Object.keys(actividad.viajes.items.properties),
+    ['origen', 'destino', 'mineral', 'desmonte', 'relleno', 'relave', 'numero_volquete']);
+  assert.equal(actividad.barras, undefined);
+  assert.deepEqual(Object.keys(config.schema.properties.horometros.properties), ['horometro']);
+  assert.match(config.instructions, /SIN\s+código ni horas/);
+  // El esquema de Taladro Largo no cambia al agregar viajes.
+  assert.equal(procesos['tal-largo'].schema.properties.actividades.items.properties.viajes, undefined);
+});
+test('scissor (utilitario) sheet has its own route, columns and one meter', async t => {
+  const f = await fixture(t);
+  assert.equal((await f.request({ path: '/api/scissor/preview' })).status, 200);
+  assert.deepEqual(f.procesos(), ['scissor']);
+  const config = procesos.scissor;
+  const actividad = config.schema.properties.actividades.items.properties;
+  for (const k of ['labor', 'destino', 'ducto', 'cable', 'tuberia', 'tipo_perforacion']) {
+    assert.ok(actividad[k], k);
+  }
+  assert.deepEqual(Object.keys(config.schema.properties.horometros.properties), ['diesel']);
+  assert.match(config.instructions, /EQUIPO UTILITARIO/);
+  assert.match(config.instructions, /letras suelen escribirse ARRIBA del número/);
+});
 test('horizontal sheet asks for its own columns and the five footer meters', async () => {
   const config = procesos['tal-horizontal'];
   const actividad = config.schema.properties.actividades.items.properties;
