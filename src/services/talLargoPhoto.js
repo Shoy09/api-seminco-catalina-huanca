@@ -187,12 +187,19 @@ Columnas de cada fila: N°, CÓDIGO, HORA INICIO y FIN, H. DE MOTOR y H. DE
 PERCUSIÓN (inicial/final por fila: NO las devuelvas), LABOR, METROS LINEALES →
 metros_lineales, ÁREA (m2) → area_m2, TIPO DE LABOR → tipo_labor_texto con la
 letra tal como está (F, B, R, D, S o I), OBSERVACIONES → observaciones.
-Las observaciones largas (ej. "ajuste de perno de rompedor", "obstrucción de vía")
-pueden cruzar varias columnas: no las confundas con labor ni con números.
-La labor está SOLO en la columna LABOR y se devuelve en la fila donde está
-escrita. En las actividades de desatado (101) es la labor trabajada (ej.
-TJ5181, CX3828). En los traslados (105) suele indicar origen y destino (ej.
-"P.7 TJ5181"): devuélvela completa tal como está escrita.
+La labor es SOLO lo escrito dentro de la columna LABOR: una sola labor por fila
+(ej. 416, P.7, TJ5181, CX3828, RP522), en la fila donde está escrita.
+En los traslados (105) el operador suele escribir otra ubicación a la derecha de
+la labor, en la columna METROS LINEALES o ÁREA (ej. labor "416" y a su derecha
+"P.7"; labor "P.7" y a su derecha "TJ5181"): esa segunda ubicación NO es parte de
+la labor ni metros ni área; agrégala a observaciones de esa fila (ej. "P.7").
+METROS LINEALES y ÁREA solo llevan números; si lo escrito no es un número, va a
+observaciones.
+Las observaciones largas (ej. "ajuste de perno de rompedor", "obstrucción de vía
+scoop 27 inoperativo", "espera falta de limpieza. CX3741") cruzan varias columnas
+desde la hora hasta OBSERVACIONES: todo ese texto es la observación de SU fila,
+incluido un código de labor al final (ej. CX3741); no lo pongas como labor ni lo
+pases a la fila de arriba o de abajo.
 Horómetros del pie: HORÓMETRO DE MOTOR → diesel; HORÓMETRO PERCUSIÓN →
 percusion. No intercambies motor con percusión.`,
 };
