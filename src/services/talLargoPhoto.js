@@ -59,6 +59,8 @@ La labor se lee SOLO de su columna (indicada abajo para esta hoja); nunca tomes
 como labor valores de otras columnas. Cuando está escrita suele ser letras
 seguidas de un número (ej. TJ 493, CX 730): devuelve el texto COMPLETO, letras y
 número juntos, nunca solo el número. Si la columna está vacía, labor es null.
+Devuelve las letras tal como están escritas (ej. "C 730", "CR 730", "CH 730", "Cámara 70"):
+no las cambies por otras parecidas (una C no es CX); la aplicación las normaliza.
 Los números de las columnas de horómetro de cada fila (H. INICIAL / H. FINAL,
 H. DE MOTOR, H. DE PERCUSIÓN, H. ELÉCTRICO; ej. 4523.4, 1287.0) NUNCA son labor:
 la labor no lleva decimales ni es una lectura de horómetro.
