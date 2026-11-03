@@ -59,6 +59,9 @@ La labor se lee SOLO de su columna (indicada abajo para esta hoja); nunca tomes
 como labor valores de otras columnas. Cuando está escrita suele ser letras
 seguidas de un número (ej. TJ 493, CX 730): devuelve el texto COMPLETO, letras y
 número juntos, nunca solo el número. Si la columna está vacía, labor es null.
+Los números de las columnas de horómetro de cada fila (H. INICIAL / H. FINAL,
+H. DE MOTOR, H. DE PERCUSIÓN, H. ELÉCTRICO; ej. 4523.4, 1287.0) NUNCA son labor:
+la labor no lleva decimales ni es una lectura de horómetro.
 No devuelvas firmas. Si la hoja está cortada, borrosa o no corresponde, avisa.
 El master revisará y corregirá todo antes de guardar.`;
 
@@ -189,6 +192,10 @@ metros_lineales, ÁREA (m2) → area_m2, TIPO DE LABOR → tipo_labor_texto con 
 letra tal como está (F, B, R, D, S o I), OBSERVACIONES → observaciones.
 La labor es SOLO lo escrito dentro de la columna LABOR: una sola labor por fila
 (ej. 416, P.7, TJ5181, CX3828, RP522), en la fila donde está escrita.
+Ubica la columna LABOR por su encabezado: está DESPUÉS de las columnas H. DE
+MOTOR y H. DE PERCUSIÓN. Las lecturas de esas columnas (números largos con
+decimales, que suben fila a fila, ej. 4523.4 → 4524.1) no son labor aunque
+estén cerca; si la celda LABOR de la fila está vacía, labor es null.
 En los traslados (105) el operador suele escribir otra ubicación a la derecha de
 la labor, en la columna METROS LINEALES o ÁREA (ej. labor "416" y a su derecha
 "P.7"; labor "P.7" y a su derecha "TJ5181"): esa segunda ubicación NO es parte de
