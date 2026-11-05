@@ -283,6 +283,16 @@ test('an overloaded Gemini (503) is retried, then the fallback model is used', a
       return models.length < 3 ? Response.json({}, { status: 503 }) : ok();
     } });
   assert.deepEqual(models, ['test-model', 'backup-model', 'test-model']);
+  // Respaldo sin cuota (429): se deja de usar y se sigue con el principal.
+  models.length = 0;
+  await readTalLargoPhoto(image, { ...opts, fallbackModel: 'backup-model',
+    fetchImpl: async url => {
+      const m = url.match(/models\/([^:]+)/)[1];
+      models.push(m);
+      if (m === 'backup-model') return Response.json({}, { status: 429 });
+      return models.length < 4 ? Response.json({}, { status: 503 }) : ok();
+    } });
+  assert.deepEqual(models, ['test-model', 'backup-model', 'test-model', 'test-model']);
   calls = 0;
   await assert.rejects(readTalLargoPhoto(image, { ...opts,
     fetchImpl: async () => { calls++; return Response.json({}, { status: 503 }); } }),

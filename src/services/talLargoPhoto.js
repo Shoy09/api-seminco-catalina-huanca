@@ -336,17 +336,26 @@ async function readPhoto(body, {
   // Gemini saturado (500/503 "high demand") es pasajero: hasta 6 intentos con
   // esperas crecientes (≈30 s en total), alternando con GEMINI_FALLBACK_MODEL
   // si está configurado. No se reintenta si ya no queda tiempo para leer.
+  // Un modelo sin cuota (429) se deja de usar y se sigue con el otro.
   const fallback = /^[a-zA-Z0-9._-]+$/.test(fallbackModel ?? '') ? fallbackModel : model;
+  const modelos = [...new Set([model, fallback])];
+  const sinCuota = new Set();
   const inicio = Date.now();
   try {
     let response;
     for (let i = 0; i < 6; i++) {
-      const m = i % 2 === 1 ? fallback : model;
+      const disponibles = modelos.filter(m => !sinCuota.has(m));
+      const m = disponibles[i % disponibles.length];
       if (i > 0) {
         if (Date.now() - inicio + retryDelayMs * i > timeoutMs - 30000) break;
         await new Promise(r => setTimeout(r, retryDelayMs * i));
       }
       response = await call(m);
+      if (response.status === 429 && disponibles.length > 1) {
+        console.error(`[foto ${proceso}] Gemini ${m} sin cuota (429); se sigue con el otro modelo`);
+        sinCuota.add(m);
+        continue;
+      }
       if (response.status !== 500 && response.status !== 503) break;
       console.error(`[foto ${proceso}] Gemini ${m} HTTP ${response.status} (intento ${i + 1})`);
     }
