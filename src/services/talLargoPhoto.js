@@ -316,39 +316,64 @@ async function readPhoto(body, {
   if (signal?.aborted) abort();
   signal?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(abort, timeoutMs);
+  const request = JSON.stringify({
+    systemInstruction: { parts: [{ text: config.instructions }] },
+    contents: [{ role: 'user', parts: [
+      { text: `Catálogo de referencia de códigos: ${JSON.stringify(body.catalogo)}` },
+      { inlineData: { mimeType: body.mimeType, data: body.image } },
+    ] }],
+    generationConfig: { temperature: 0, maxOutputTokens: 16384,
+      responseMimeType: 'application/json', responseJsonSchema: config.geminiSchema },
+  });
+  const call = () => fetchImpl(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST', signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: request,
+    });
   try {
-    const response = await fetchImpl(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: 'POST', signal: controller.signal,
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: config.instructions }] },
-          contents: [{ role: 'user', parts: [
-            { text: `Catálogo de referencia de códigos: ${JSON.stringify(body.catalogo)}` },
-            { inlineData: { mimeType: body.mimeType, data: body.image } },
-          ] }],
-          generationConfig: { temperature: 0, maxOutputTokens: 16384,
-            responseMimeType: 'application/json', responseJsonSchema: config.geminiSchema },
-        }),
-      });
+    let response = await call();
+    // Gemini saturado (500/503) suele responder al segundo intento.
+    if (response.status === 500 || response.status === 503) {
+      console.error(`[foto ${proceso}] Gemini HTTP ${response.status}; reintentando`);
+      await new Promise(r => setTimeout(r, 2000));
+      response = await call();
+    }
     if (!response.ok) {
-      throw error(response.status === 429 ? 429 : 502, 'No se pudo completar la lectura con Gemini.');
+      const detail = (await response.text().catch(() => '')).slice(0, 500);
+      console.error(`[foto ${proceso}] Gemini HTTP ${response.status}: ${detail}`);
+      throw error(response.status === 429 ? 429 : 502,
+        `Gemini respondió con error ${response.status}. Intenta nuevamente en unos minutos.`);
     }
     const data = await response.json();
     const candidate = data.candidates?.[0];
-    if (candidate?.finishReason !== 'STOP') throw error(502, 'Gemini devolvió una lectura incompleta.');
+    if (candidate?.finishReason !== 'STOP') {
+      const motivo = candidate?.finishReason ?? data.promptFeedback?.blockReason ?? 'sin respuesta';
+      console.error(`[foto ${proceso}] Gemini terminó con ${motivo}`);
+      throw error(502, motivo === 'MAX_TOKENS'
+        ? 'La hoja tiene demasiados datos para una sola lectura (MAX_TOKENS).'
+        : `Gemini devolvió una lectura incompleta (${motivo}).`);
+    }
     let draft;
     try {
       draft = JSON.parse(candidate.content.parts.filter(p => !p.thought)
         .map(p => p.text ?? '').join(''));
     } catch {
+      console.error(`[foto ${proceso}] respuesta de Gemini no es JSON`);
       throw error(502, 'La lectura no tiene un formato válido.');
     }
-    if (!validOutput(draft, config.schema)) throw error(502, 'La lectura no tiene un formato válido.');
+    if (!validOutput(draft, config.schema)) {
+      console.error(`[foto ${proceso}] respuesta de Gemini fuera del esquema`);
+      throw error(502, 'La lectura no tiene un formato válido.');
+    }
     return draft;
   } catch (e) {
-    if (e.name === 'AbortError') throw error(504, 'Se agotó el tiempo de lectura de la foto.');
+    if (e.name === 'AbortError') {
+      console.error(`[foto ${proceso}] tiempo agotado (${timeoutMs} ms)`);
+      throw error(504, 'Se agotó el tiempo de lectura de la foto.');
+    }
     if (e.status) throw e;
+    console.error(`[foto ${proceso}] sin conexión con Gemini: ${e.message}`);
     throw error(502, 'No se pudo conectar con Gemini.');
   } finally {
     clearTimeout(timer);
