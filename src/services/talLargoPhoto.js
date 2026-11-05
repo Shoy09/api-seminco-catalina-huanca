@@ -353,8 +353,9 @@ async function readPhoto(body, {
     if (!response.ok) {
       const detail = (await response.text().catch(() => '')).slice(0, 500);
       console.error(`[foto ${proceso}] Gemini HTTP ${response.status}: ${detail}`);
-      throw error(response.status === 429 ? 429 : 502,
-        `Gemini respondió con error ${response.status}. Intenta nuevamente en unos minutos.`);
+      throw error(response.status === 429 ? 429 : 502, response.status === 429
+        ? 'Se agotó la cuota de Gemini (límite de Google). Intenta más tarde.'
+        : `Gemini respondió con error ${response.status}. Intenta nuevamente en unos minutos.`);
     }
     const data = await response.json();
     const candidate = data.candidates?.[0];

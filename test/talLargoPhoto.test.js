@@ -202,8 +202,24 @@ test('daily limit is enforced after cooldown', async t => {
   const f = await fixture(t, { dailyLimit: 1, now: () => clock });
   assert.equal((await f.request()).status, 200);
   clock += 11000;
-  assert.equal((await f.request()).status, 429);
+  const limited = await f.request();
+  assert.equal(limited.status, 429);
+  assert.match((await limited.json()).error, /límite de 1 lecturas por día/);
   assert.equal(f.calls(), 1);
+});
+test('reads that fail on Gemini do not use the daily limit', async t => {
+  let clock = Date.now(), fail = true;
+  const f = await fixture(t, { dailyLimit: 1, now: () => clock,
+    readPhoto: async () => {
+      if (fail) throw Object.assign(new Error('Gemini respondió con error 503.'), { status: 502 });
+      return empty();
+    } });
+  assert.equal((await f.request()).status, 502);
+  clock += 11000;
+  fail = false;
+  assert.equal((await f.request()).status, 200);
+  clock += 11000;
+  assert.equal((await f.request()).status, 429);
 });
 test('missing Gemini settings fail only this route without an upstream call', async () => {
   let called = false;

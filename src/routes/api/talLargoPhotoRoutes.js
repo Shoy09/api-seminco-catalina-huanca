@@ -53,10 +53,16 @@ function createTalLargoPhotoRouter({
           if (value.day !== day && !value.busy) users.delete(k);
         }
         quota = users.get(key) ?? { day, count: 0, busy: false, last: null };
-        if (quota.busy || (quota.day === day && quota.count >= dailyLimit) ||
-            (quota.last !== null && now() - quota.last < 10000)) {
+        const limite = quota.busy
+          ? 'Ya hay una lectura en curso. Espera a que termine.'
+          : quota.day === day && quota.count >= dailyLimit
+            ? `Llegaste al límite de ${dailyLimit} lecturas por día. Intenta mañana.`
+            : quota.last !== null && now() - quota.last < 10000
+              ? 'Espera unos segundos antes de leer otra foto.'
+              : null;
+        if (limite) {
           res.set('Retry-After', '10');
-          return res.status(429).json({ error: 'Límite de lecturas alcanzado. Intenta más tarde.' });
+          return res.status(429).json({ error: limite });
         }
         if (quota.day !== day) { quota.day = day; quota.count = 0; }
         quota.busy = true;
@@ -67,6 +73,9 @@ function createTalLargoPhotoRouter({
         const draft = await readPhoto(req.body, { proceso, signal: controller.signal });
         if (!res.destroyed) res.json(draft);
       } catch (e) {
+        // Si Gemini falló (saturado, cuota, tiempo), la lectura no cuenta para
+        // el límite diario: no se obtuvo nada.
+        if (acquired && (e.status === 429 || e.status >= 500)) quota.count--;
         if (!res.destroyed) {
           res.status(e.status ?? 502).json({
             error: e.status ? e.message : 'No se pudo leer la foto. Intenta nuevamente.',
