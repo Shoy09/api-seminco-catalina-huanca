@@ -302,7 +302,7 @@ async function readPhoto(body, {
   apiKey = process.env.GEMINI_API_KEY,
   model = process.env.GEMINI_MODEL,
   fallbackModel = process.env.GEMINI_FALLBACK_MODEL,
-  retryDelayMs = 3000,
+  retryDelayMs = 2000,
   fetchImpl = globalThis.fetch,
   signal,
   timeoutMs = 85000,
@@ -333,15 +333,19 @@ async function readPhoto(body, {
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: request,
     });
-  // Gemini saturado (500/503 "high demand") es pasajero: se reintenta con
-  // esperas crecientes y, si hay GEMINI_FALLBACK_MODEL, el último intento usa
-  // ese modelo.
+  // Gemini saturado (500/503 "high demand") es pasajero: hasta 6 intentos con
+  // esperas crecientes (≈30 s en total), alternando con GEMINI_FALLBACK_MODEL
+  // si está configurado. No se reintenta si ya no queda tiempo para leer.
   const fallback = /^[a-zA-Z0-9._-]+$/.test(fallbackModel ?? '') ? fallbackModel : model;
-  const intentos = [[model, 0], [model, retryDelayMs], [fallback, retryDelayMs * 2]];
+  const inicio = Date.now();
   try {
     let response;
-    for (const [i, [m, espera]] of intentos.entries()) {
-      if (espera) await new Promise(r => setTimeout(r, espera));
+    for (let i = 0; i < 6; i++) {
+      const m = i % 2 === 1 ? fallback : model;
+      if (i > 0) {
+        if (Date.now() - inicio + retryDelayMs * i > timeoutMs - 30000) break;
+        await new Promise(r => setTimeout(r, retryDelayMs * i));
+      }
       response = await call(m);
       if (response.status !== 500 && response.status !== 503) break;
       console.error(`[foto ${proceso}] Gemini ${m} HTTP ${response.status} (intento ${i + 1})`);

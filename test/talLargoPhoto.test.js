@@ -266,12 +266,12 @@ test('an overloaded Gemini (503) is retried, then the fallback model is used', a
       models.push(url.match(/models\/([^:]+)/)[1]);
       return models.length < 3 ? Response.json({}, { status: 503 }) : ok();
     } });
-  assert.deepEqual(models, ['test-model', 'test-model', 'backup-model']);
+  assert.deepEqual(models, ['test-model', 'backup-model', 'test-model']);
   calls = 0;
   await assert.rejects(readTalLargoPhoto(image, { ...opts,
     fetchImpl: async () => { calls++; return Response.json({}, { status: 503 }); } }),
   e => e.status === 502 && /503/.test(e.message));
-  assert.equal(calls, 3);
+  assert.equal(calls, 6);
 });
 test('Gemini timeout cancels the upstream request', async () => {
   await assert.rejects(readTalLargoPhoto(image, { apiKey: 'test-key', model: 'test-model', timeoutMs: 10,
