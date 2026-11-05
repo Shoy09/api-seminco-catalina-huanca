@@ -252,18 +252,26 @@ test('truncated, malformed and quota responses are safe failures without retry',
     assert.equal(calls, 1);
   }
 });
-test('an overloaded Gemini (503) is retried once and the error says why', async () => {
-  const ok = Response.json({ candidates: [{ finishReason: 'STOP',
+test('an overloaded Gemini (503) is retried, then the fallback model is used', async () => {
+  const ok = () => Response.json({ candidates: [{ finishReason: 'STOP',
     content: { parts: [{ text: JSON.stringify(empty()) }] } }] });
+  const opts = { apiKey: 'test-key', model: 'test-model', retryDelayMs: 1 };
   let calls = 0;
-  await readTalLargoPhoto(image, { apiKey: 'test-key', model: 'test-model',
-    fetchImpl: async () => (++calls === 1 ? Response.json({}, { status: 503 }) : ok) });
+  await readTalLargoPhoto(image, { ...opts,
+    fetchImpl: async () => (++calls === 1 ? Response.json({}, { status: 503 }) : ok()) });
   assert.equal(calls, 2);
+  const models = [];
+  await readTalLargoPhoto(image, { ...opts, fallbackModel: 'backup-model',
+    fetchImpl: async url => {
+      models.push(url.match(/models\/([^:]+)/)[1]);
+      return models.length < 3 ? Response.json({}, { status: 503 }) : ok();
+    } });
+  assert.deepEqual(models, ['test-model', 'test-model', 'backup-model']);
   calls = 0;
-  await assert.rejects(readTalLargoPhoto(image, { apiKey: 'test-key', model: 'test-model',
+  await assert.rejects(readTalLargoPhoto(image, { ...opts,
     fetchImpl: async () => { calls++; return Response.json({}, { status: 503 }); } }),
   e => e.status === 502 && /503/.test(e.message));
-  assert.equal(calls, 2);
+  assert.equal(calls, 3);
 });
 test('Gemini timeout cancels the upstream request', async () => {
   await assert.rejects(readTalLargoPhoto(image, { apiKey: 'test-key', model: 'test-model', timeoutMs: 10,

@@ -301,6 +301,8 @@ async function readPhoto(body, {
   proceso = 'tal-largo',
   apiKey = process.env.GEMINI_API_KEY,
   model = process.env.GEMINI_MODEL,
+  fallbackModel = process.env.GEMINI_FALLBACK_MODEL,
+  retryDelayMs = 3000,
   fetchImpl = globalThis.fetch,
   signal,
   timeoutMs = 85000,
@@ -325,19 +327,24 @@ async function readPhoto(body, {
     generationConfig: { temperature: 0, maxOutputTokens: 16384,
       responseMimeType: 'application/json', responseJsonSchema: config.geminiSchema },
   });
-  const call = () => fetchImpl(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+  const call = m => fetchImpl(
+    `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
       method: 'POST', signal: controller.signal,
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: request,
     });
+  // Gemini saturado (500/503 "high demand") es pasajero: se reintenta con
+  // esperas crecientes y, si hay GEMINI_FALLBACK_MODEL, el último intento usa
+  // ese modelo.
+  const fallback = /^[a-zA-Z0-9._-]+$/.test(fallbackModel ?? '') ? fallbackModel : model;
+  const intentos = [[model, 0], [model, retryDelayMs], [fallback, retryDelayMs * 2]];
   try {
-    let response = await call();
-    // Gemini saturado (500/503) suele responder al segundo intento.
-    if (response.status === 500 || response.status === 503) {
-      console.error(`[foto ${proceso}] Gemini HTTP ${response.status}; reintentando`);
-      await new Promise(r => setTimeout(r, 2000));
-      response = await call();
+    let response;
+    for (const [i, [m, espera]] of intentos.entries()) {
+      if (espera) await new Promise(r => setTimeout(r, espera));
+      response = await call(m);
+      if (response.status !== 500 && response.status !== 503) break;
+      console.error(`[foto ${proceso}] Gemini ${m} HTTP ${response.status} (intento ${i + 1})`);
     }
     if (!response.ok) {
       const detail = (await response.text().catch(() => '')).slice(0, 500);
